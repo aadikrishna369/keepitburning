@@ -246,19 +246,12 @@ class Fire:
 
 class Bat:
     def __init__(self, pos):
-        pass
-
-    def update(self, dt):
-        pass
-
-    def draw(self, window):
-        pass         
-
-class Bat:
-    def __init__(self, pos):
         self.pos = pos 
         self.id = 1
         self.health = 100
+        self.death_particles = DeathParticles()
+
+        self.dead = False
 
         self.load()
 
@@ -274,8 +267,14 @@ class Bat:
         self.lasered = False
 
         self.collider_radius = 40
+        self.floor_gap = 65
 
         self.laser_pause = Timer(0.2)
+
+        self.flap_particles = Dustparticles()
+
+        self.hbr = pygame.Rect(0,0, 100, 10)
+        self.hr = pygame.Rect(0,0, self.hbr.width, self.hbr.height)
 
     def laserme(self):
         self.lasered = True
@@ -287,6 +286,10 @@ class Bat:
             self.laser_pause.start()
             self.lasered = False
         
+    def blastme(self):
+        if not len(self.death_particles.particles):
+            self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
+
 
     def update(self, dt, target_pos):
         if not self.lasered:
@@ -298,20 +301,18 @@ class Bat:
             self.vel *= 0
             self.laser_pause.update(dt)
 
-        # print(self.laser_pause.timer)
 
-        self.pos += self.vel*dt
-
-
-        self.last_index = self.index
-        self.index += self.anim_speed * dt
+        if self.health > 0:
+            self.pos += self.vel*dt
+            self.last_index = self.index
+            self.index += self.anim_speed * dt
 
         if math.floor(self.last_index) != math.floor(self.index):
             if math.floor(self.index) == 2:
-                print("flap")
-            #print("index changed")
+                for _ in range(4,10): self.flap_particles.add(self.pos + vec2(-10, self.floor_gap) + genRandomVec(5))
 
         self.index %= len(self.images)
+        self.flap_particles.update(dt)
 
         
 
@@ -320,6 +321,19 @@ class Bat:
         else:
             self.image = self.hurt_images[int(self.index)]
         self.rect = self.image.get_rect(center=self.pos)
+
+        self.hbr.centerx = self.pos.x
+        self.hbr.bottom = self.rect.top
+
+        self.hr.width = self.hbr.width * self.health/100
+        self.hr.left = self.hbr.left
+        self.hr.top = self.hbr.top
+
+        if self.health <= 0:
+            self.death_particles.update(dt)
+
+            if len(self.death_particles.particles) <= 5:
+                self.dead = True
 
     def resolve_collision(self, e):
         if (e.pos - self.pos).length_squared() <= (e.collider_radius + self.collider_radius)**2:
@@ -331,7 +345,18 @@ class Bat:
 
     def draw(self, window):
         if DRAW_COLLIDERS: pygame.draw.circle(window, gray(50), self.pos, self.collider_radius)
-        window.blit(self.image, self.rect)
+
+        self.flap_particles.draw(window)
+        if self.health > 0: window.blit(self.image, self.rect)
+        self.death_particles.draw(window)
+
+        ## drawing the health bar
+        if not len(self.death_particles.particles):
+            pygame.draw.rect(window, gray(30), self.hbr)
+            pygame.draw.rect(window, (180,20,20), self.hr)
+
+        if self.lasered:
+            pygame.draw.rect(window, gray(180), self.hbr, 3)
 
 
 class Scene:
@@ -371,6 +396,8 @@ class Scene:
             if not self.player.laser.begun :
                 e.delaserme()
             if e.health <= 0:
+                e.blastme()
+            if e.dead:
                 self.enemies.remove(e)
                 deleted += 1
 
