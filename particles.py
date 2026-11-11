@@ -29,6 +29,28 @@ class DeathParticles:
             f = p[2]/p[3]
             pygame.draw.circle(window, gray(200), p[0], int(10*(1-f)))
 
+class AmbientParticles:
+    def __init__(self):
+        self.color = (0, 200, 200)
+
+        self.particles = []
+
+    def add(self, pos):
+        self.particles.append([pos.copy(), 0, 2 + random.randint(-3, 6)/10, genRandomVec()*40])
+
+    def update(self, dt):
+        for p in self.particles:
+            p[1] += dt
+            p[0] += p[3] * dt
+
+            if p[1] >= p[2]:
+                self.particles.remove(p)
+
+    def draw(self, window):
+        for p in self.particles:
+            f = p[1]/p[2]
+            pygame.draw.circle(window, self.color, p[0], 10*(1-f))
+
 class Dustparticles:
     def __init__(self):
         self.pos = vec2(0,0)

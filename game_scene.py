@@ -253,13 +253,35 @@ class Laser:
 class Fire:
     def __init__(self, pos):
         self.pos = pos 
+        self.base_pos = pos
+
         self.health = 100
+        self.ring_rect = pygame.Rect(0,0,100, 100)
+        self.ring_rect.center = self.pos
+
+        self.breathe_anim_counter = 0
+        self.breathe_anim_speed = 100
+        self.collider_radius = 50
+
+        self.amb_particles = AmbientParticles()
 
     def update(self, dt):
-        pass
+        self.breathe_anim_counter += self.breathe_anim_speed * dt
+
+        if len(self.amb_particles.particles) <= 20:
+            print("Aded")
+            for _ in range(random.randint(1,5)): self.amb_particles.add(self.pos.copy() + genRandomVec()*20)
+
+        self.amb_particles.update(dt)
+
+        self.pos = self.base_pos + vec2(0, math.sin(math.radians(self.breathe_anim_counter))*2.5)
 
     def draw(self, window):
-        pygame.draw.circle(window, (0,200,200), self.pos, 40*self.health/100)
+        pygame.draw.circle(window, (0,200,200), self.pos, 30)
+        pygame.draw.arc(window, (0,200,200), self.ring_rect, 0, math.radians(360), 5)
+        pygame.draw.arc(window, (180,20,20), self.ring_rect, 0, -math.radians(360*(self.health/100)), 5)
+
+        self.amb_particles.draw(window)
 
 class Bat:
     def __init__(self, pos):
@@ -421,13 +443,11 @@ class Ghost:
             if self.can_invi:
                 if self.state == "normal":
                     for i in self.images: i.set_alpha(80)
-                print("now invi")
                 self.state = "invi"
             else:
                 if self.state == "invi":
                     for i in self.images: i.set_alpha(255)
                 self.state = "normal"
-                print("now vi")
                 self.lasered = True
                 self.laser_pause.reset()
 
@@ -881,6 +901,46 @@ class Witch:
         if self.lasered:
             pygame.draw.rect(window, gray(180), self.hbr, 3)
 
+class Thunderbolt:
+    def __init__(self, start, end):
+        self.start_pos = start
+        self.end_pos = end 
+        self.precision = 4
+        self.width = 7
+        self.regen_timer = Timer(0.08)
+        self.regen_timer.start()
+
+        self.lifetime = Timer(0.2)
+        self.lifetime.start()
+
+        self.max_dis = 20
+        self.displacements = [random.randint(-self.max_dis, self.max_dis) for _ in range(2**(self.precision) - 1)]
+
+        self.dir = (self.end_pos-self.start_pos).normalize()
+        self.length = (self.end_pos - self.start_pos).length()
+        self.divisions_length = self.length/len(self.displacements)
+
+
+    def update(self, dt):
+        self.regen_timer.update(dt)
+
+        self.lifetime.update(dt)
+
+
+        if self.regen_timer.is_over():
+            self.regen_timer.reset()
+            self.regen_timer.start()
+            self.displacements = [random.randint(-self.max_dis, self.max_dis) for _ in range(2**(self.precision) - 1)]
+
+    def draw(self, window):
+        #pygame.draw.line(window, gray(220), self.start_pos, self.end_pos, self.width)
+
+        for i in range(len(self.displacements)):
+            start = self.start_pos + self.dir*self.divisions_length*i + vec2(self.displacements[i], 0)
+            end = self.start_pos + self.dir*self.divisions_length*(i+1)+ vec2(self.displacements[i+1] if i < len(self.displacements)-1 else 0, 0)
+            pygame.draw.line(window, gray(220), start, end, self.width)
+
+        pygame.draw.circle(window, gray(220), self.end_pos, 50)
 
 class Scene:
     def __init__(self):
@@ -888,7 +948,7 @@ class Scene:
         self.fire = Fire(RES/2)
 
         self.enemies = []
-
+        self.bolts = []
 
     def load(self):
         self.player.load()
@@ -898,7 +958,20 @@ class Scene:
 
     def update(self, dt):
         self.fire.update(dt)
+
+        for bolt in self.bolts:
+            bolt.update(dt)
+
+            if bolt.lifetime.is_over():
+                self.bolts.remove(bolt)
+
         self.player.update(dt)
+
+        if (self.player.pos - self.fire.pos).length_squared() <= (self.player.collider_radius + self.fire.collider_radius)**2:
+            p = self.player.collider_radius + self.fire.collider_radius - (self.player.pos - self.fire.pos).length()
+            n = (self.player.pos - self.fire.pos).normalize()
+
+            self.player.pos += p*n
 
         deleted = 0
         for i in range(len(self.enemies)):
@@ -913,6 +986,13 @@ class Scene:
 
             e.update(dt, self.fire.pos)
 
+            if (e.pos - self.fire.pos).length_squared() <= (e.collider_radius + self.fire.collider_radius)**2:
+                if e.health > 0:
+                    ## colliding with fire
+                    e.blastme()
+                    e.health = -10
+                    self.fire.health -= 10
+
             if self.player.laser.begun:
                 #detect if enemy is being lsered
                 u = e.pos - self.player.laser.pos
@@ -924,10 +1004,17 @@ class Scene:
                         if e.can_spawn:
                             e.can_spawn = False
                             poss = [Bat, Jacko, Vampire, Ghost]
-                            self.enemies.append(random.choice(poss)(e.pos.copy() + self.player.laser.dir.rotate(90)*50))
+                            p1 = e.pos.copy() + self.player.laser.dir.rotate(90)*50
+                            p2 = e.pos.copy() - self.player.laser.dir.rotate(90)*50
+
+                            self.enemies.append(random.choice(poss)(p1))
                             self.enemies[-1].update(dt, self.fire.pos)
-                            self.enemies.append(random.choice(poss)(e.pos.copy() - self.player.laser.dir.rotate(90)*50))
+                            self.bolts.append(Thunderbolt(vec2(p1.x, 0), p1))
+
+                            self.enemies.append(random.choice(poss)(p2))
                             self.enemies[-1].update(dt, self.fire.pos)
+                            self.bolts.append(Thunderbolt(vec2(p2.x, 0), p2))
+
                             e.laserme()
                     else:
                         e.laserme()
@@ -966,18 +1053,26 @@ class Scene:
         for e in self.enemies:
             e.draw(window)
 
+        for bolt in self.bolts:
+            bolt.draw(window)
+
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_1:
                 self.enemies.append(Bat(getMousePos()))
+                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
             if event.key == pygame.K_2:
                 self.enemies.append(Ghost(getMousePos()))
+                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
             if event.key == pygame.K_3:
                 self.enemies.append(Jacko(getMousePos()))
+                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
             if event.key == pygame.K_4:
                 self.enemies.append(Vampire(getMousePos()))
+                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
             if event.key == pygame.K_5:
                 self.enemies.append(Witch(getMousePos()))
+                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
 
 
 s = Scene()
