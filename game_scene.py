@@ -137,6 +137,11 @@ class Laser:
         self.sa_part_done = False
         self.sa_timer = 0
 
+        self.mana = 100
+        self.mana_usage = 30
+        self.mana_rect = pygame.Rect(0, 0, 30, 30)
+        
+
         self.charge = 100
 
         self.begun = False
@@ -144,7 +149,8 @@ class Laser:
         self.pos = vec2(0,0)
         self.dir = vec2(0,0)
 
-        self.width = (80, 20)
+        self.base_width = (80, 20)
+        self.width = [80, 20]
         self.colors = [(181, 26, 2), (240, 156, 46)]
 
         self.speed = 100
@@ -167,7 +173,8 @@ class Laser:
         self.sa_part_done = False
 
     def set_pos(self, pos):
-        self.pos = pos    
+        self.pos = pos  
+        self.mana_rect.center = self.pos  
 
     def set_direction(self, dir):
         self.dir = dir
@@ -192,11 +199,24 @@ class Laser:
                 self.start_anim = False
                 self.sa_timer = 0
 
-        self.bulge_timer += dt
-        if self.bulge_timer >= self.bulge_time:
-            self.bulge_timer = 0
+        if self.begun:
+            self.mana -= self.mana_usage*dt
+            self.mana = clamp(self.mana, 0, 100)
+            self.width[0] = clamp(self.base_width[0] * self.mana/100, 0, self.base_width[0])
+            self.width[1] = clamp(self.base_width[1] * self.mana/100, 0, self.base_width[1])
 
-            for _ in range(random.randint(1,5)): self.bulges.append([0, 15 + random.randint(-3,3)])
+
+            if self.mana <= 0:
+                pass
+                ### no laser left
+        if self.mana > 0:
+            self.bulge_timer += dt
+            if self.bulge_timer >= self.bulge_time:
+                self.bulge_timer = 0
+
+                for _ in range(random.randint(1,5)): self.bulges.append([0, self.width[1] + random.randint(-3,3)])
+
+        self.mana_rect.center = self.pos
 
     def draw(self, window):
         if self.start_anim:
@@ -215,32 +235,32 @@ class Laser:
                 pygame.draw.polygon(window, gray(200), points)
 
         elif self.begun:
-            ### draw the actual laser
-            l_p = []
-            l_p.append(self.pos + self.dir.rotate(90)*self.width[0]/2)
-            l_p.append(self.pos + self.dir.rotate(90)*self.width[0]/2 + self.dir*1500)
-            l_p.append(self.pos - self.dir.rotate(90)*self.width[0]/2 + self.dir*1500)
-            l_p.append(self.pos - self.dir.rotate(90)*self.width[0]/2)
-            pygame.draw.polygon(window, self.colors[0], l_p)
-            l_p2 = []
-            l_p2.append(self.pos + self.dir.rotate(90)*self.width[1]/2)
-            l_p2.append(self.pos + self.dir.rotate(90)*self.width[1]/2 + self.dir*1500)
-            l_p2.append(self.pos - self.dir.rotate(90)*self.width[1]/2 + self.dir*1500)
-            l_p2.append(self.pos - self.dir.rotate(90)*self.width[1]/2)
-            pygame.draw.polygon(window, self.colors[-1], l_p2)
+            if self.mana > 0:
+                ### draw the actual laser
+                l_p = []
+                l_p.append(self.pos + self.dir.rotate(90)*self.width[0]/2)
+                l_p.append(self.pos + self.dir.rotate(90)*self.width[0]/2 + self.dir*1500)
+                l_p.append(self.pos - self.dir.rotate(90)*self.width[0]/2 + self.dir*1500)
+                l_p.append(self.pos - self.dir.rotate(90)*self.width[0]/2)
+                pygame.draw.polygon(window, self.colors[0], l_p)
+                l_p2 = []
+                l_p2.append(self.pos + self.dir.rotate(90)*self.width[1]/2)
+                l_p2.append(self.pos + self.dir.rotate(90)*self.width[1]/2 + self.dir*1500)
+                l_p2.append(self.pos - self.dir.rotate(90)*self.width[1]/2 + self.dir*1500)
+                l_p2.append(self.pos - self.dir.rotate(90)*self.width[1]/2)
+                pygame.draw.polygon(window, self.colors[-1], l_p2)
 
-            ##bulges
-            for b in self.bulges:
-                b[0] += dt
-
-                pygame.draw.circle(window, self.colors[-1], self.pos + self.dir*1500*b[0], int(b[1]))
-
-                if b[0] >= 0.5:
-                    self.bulges.remove(b)
+                ##bulges
+                for b in self.bulges:
+                    b[0] += dt
+                    pygame.draw.circle(window, self.colors[-1], self.pos + self.dir*1500*b[0], int(b[1]))
+                    if b[0] >= 0.5:
+                        self.bulges.remove(b)
 
 
             ## the overlay stuff
             pygame.draw.circle(window, gray(200), self.pos, 10)
+            
 
             points = []
             points.append(self.pos - self.dir*5)
@@ -249,6 +269,7 @@ class Laser:
             points.append(self.pos - self.dir.rotate(90)*50)
 
             pygame.draw.polygon(window, gray(200), points)
+            pygame.draw.arc(window, gray(200), self.mana_rect, 0, math.radians(360*self.mana/100), 2)
 
 class Fire:
     def __init__(self, pos):
@@ -949,6 +970,9 @@ class Scene:
 
         self.enemies = []
         self.bolts = []
+        self.mana_particles = ManaParticles()
+        self.mana_particle_delay = Timer(0.07)
+        self.mana_particle_delay.start()
 
     def load(self):
         self.player.load()
@@ -967,7 +991,21 @@ class Scene:
 
         self.player.update(dt)
 
-        if (self.player.pos - self.fire.pos).length_squared() <= (self.player.collider_radius + self.fire.collider_radius)**2:
+        dist_p_f = (self.player.pos - self.fire.pos).length_squared()
+
+        if self.player.laser.begun:
+            if dist_p_f <= 230**2:
+                if len(self.mana_particles.particles) <= 20:
+                    self.mana_particle_delay.update(dt)
+                    if self.mana_particle_delay.is_over():
+                        for _ in range(random.randint(1,3)): self.mana_particles.add(self.fire.pos.copy() + genRandomVec(5))
+                        self.mana_particle_delay.reset()
+                        self.mana_particle_delay.start()
+
+                self.player.laser.mana += 50 * dt
+        self.mana_particles.update(dt, self.player.laser.pos)
+
+        if dist_p_f <= (self.player.collider_radius + self.fire.collider_radius)**2:
             p = self.player.collider_radius + self.fire.collider_radius - (self.player.pos - self.fire.pos).length()
             n = (self.player.pos - self.fire.pos).normalize()
 
@@ -1047,6 +1085,7 @@ class Scene:
 
 
     def draw(self, window):
+        self.mana_particles.draw(window)
         self.fire.draw(window)
         self.player.draw(window)
 

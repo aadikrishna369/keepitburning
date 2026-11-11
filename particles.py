@@ -51,6 +51,27 @@ class AmbientParticles:
             f = p[1]/p[2]
             pygame.draw.circle(window, self.color, p[0], 10*(1-f))
 
+class ManaParticles:
+    ## go from the fire to the player, recharging the mana
+    def __init__(self):
+        self.dist_buffer = 10
+        self.colors =[(181, 26, 2), (240, 156, 46)]
+        self.particles = []
+
+    def add(self, pos):
+        self.particles.append([pos,  random.randint(0,1)])
+
+    def update(self, dt, target):
+        for p in self.particles:
+            p[0] += (target + genRandomVec(20)-p[0]).normalize()*200 * dt
+
+            if (p[0]-target).length() <= self.dist_buffer:
+                self.particles.remove(p)
+
+    def draw(self, window):
+        for p in self.particles:
+            pygame.draw.circle(window, self.colors[p[1]], p[0], 4)
+
 class Dustparticles:
     def __init__(self):
         self.pos = vec2(0,0)
