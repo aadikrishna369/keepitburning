@@ -18,6 +18,9 @@ def genRandomVec(mag=1,start_angle=0, end_angle=360):
     theta = start_angle + (start_angle-end_angle)*random.randint(0,100)/100
     return v.rotate(theta)*mag
 
+def getMousePos():
+    return vec2(*pygame.mouse.get_pos())
+
 def lerpColor(ci, cf, t):
     c = [0,0,0]
     for i in range(3):
