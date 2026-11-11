@@ -1,5 +1,71 @@
 from utils import *
 
+class RainParticles:
+    class Raindrop:
+        def __init__(self, dir, pos, gravity, max_pos, start_speed=10):
+            self.dir = dir
+            self.max_pos = max_pos
+            self.pos = pos 
+            self.speed = start_speed
+            self.gravity = gravity
+
+            self.no_use = False
+
+            self.vel = self.speed * self.dir
+            self.trail = []
+            self.depth = random.randint(1,10)/10
+            self.trail_length = 3*(1+self.depth)
+            self.head_radius = 3
+
+        def update(self, dt):
+            if len(self.trail) <= self.trail_length:
+                self.trail.append(self.pos.copy())
+            else:
+                self.trail.pop(0)
+            self.pos += self.vel * dt
+            self.vel += self.gravity * dt
+
+            if len(self.trail):
+                if self.trail[0].x >= self.max_pos.x:
+                    self.no_use = True
+                elif self.trail[0].x <= 0:
+                    self.no_use = True
+
+                if self.trail[0].y >= self.max_pos.y:
+                    self.no_use = True
+
+        def draw(self, window):
+            # for i in range(len(self.trail)):
+            #     pygame.draw.circle(window, gray(200), self.trail[i], self.head_radius*i/len(self.trail))
+            # pygame.draw.circle(window, gray(200), self.pos, self.head_radius)
+
+            pygame.draw.line(window, gray(200), self.pos, self.trail[0], int(4*(1-self.depth)))
+
+            
+    def __init__(self, max_pos):
+        self.direction = vec2(-10, -10).normalize()
+        self.particles = []
+        self.gravity = vec2(0,400)
+        self.max_pos = max_pos
+
+
+    def add(self, pos):
+        self.particles.append(self.Raindrop(self.direction, pos.copy(), self.gravity, self.max_pos, 50))
+        
+
+    def update(self, dt):
+        for p in self.particles:
+            p.update(dt)
+
+            if p.no_use:
+                self.particles.remove(p)
+
+                
+
+    def draw(self, window):
+        for p in self.particles:
+            p.draw(window)
+
 class DeathParticles:
     def __init__(self):
         self.particles = []
@@ -123,3 +189,4 @@ class Dustparticles:
             pos = p[0]
 
             pygame.draw.circle(window, lerpColor(self.start_color, self.final_color, time/lifetime), pos, self.max_size*(1-(time/lifetime)))
+
