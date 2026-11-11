@@ -763,6 +763,124 @@ class Vampire:
         if self.lasered:
             pygame.draw.rect(window, gray(180), self.hbr, 3)
 
+class Witch:
+    def __init__(self, pos):
+        self.pos = pos 
+        self.id = 5
+        self.health = 200
+        self.death_particles = DeathParticles()
+
+        self.dead = False
+
+        self.load()
+
+    def load(self):
+        self.images = [load_image(f"assets/images/enemies/witch/Witch{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
+        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/witch/Witch{i}.png", 2, solid_overlay=(140,0,0)), gray(200), outline_thick=4, precision=8) for i in range(1,5)]
+
+        self.index = 0
+        self.anim_speed = 8
+        self.vel = vec2(0,0)
+        self.max_speed = 100
+        self.hurt_speed = 20
+        self.lasered = False
+
+        self.collider_radius = 40
+        self.floor_gap = 40
+
+        self.laser_pause = Timer(0.2)
+
+        self.hbr = pygame.Rect(0,0, 100, 10)
+        self.hr = pygame.Rect(0,0, self.hbr.width, self.hbr.height)
+
+        self.spawn_cooldown = Timer(10)
+        self.spawn_cooldown.start()
+        self.can_spawn = True
+
+    def laserme(self, laser_dir=vec2(0,1)):
+        self.lasered = True
+        self.laser_pause.reset()
+        
+
+    def delaserme(self):
+        if self.lasered:
+            self.laser_pause.start()
+            self.lasered = False
+        
+    def blastme(self):
+        if not len(self.death_particles.particles):
+            self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
+
+
+    def update(self, dt, target_pos):
+        if not self.lasered:
+            self.vel = (target_pos-self.pos).normalize()*self.max_speed
+        else:
+            self.vel = (target_pos-self.pos).normalize()*self.hurt_speed
+
+        if self.laser_pause.started:
+            self.vel *= 0
+            self.laser_pause.update(dt)
+
+
+        if self.health > 0:
+            self.pos += self.vel*dt
+            self.last_index = self.index
+            self.index += self.anim_speed * dt
+
+        self.index %= len(self.images)
+
+        if not self.can_spawn:
+            self.spawn_cooldown.update(dt)
+
+            if self.spawn_cooldown.is_over():
+                self.spawn_cooldown.reset()
+                self.spawn_cooldown.start()
+                self.can_spawn = True
+        
+
+        if (not self.lasered) and (not self.laser_pause.started):
+            self.image = self.images[int(self.index)]
+        else:
+            self.image = self.hurt_images[int(self.index)]
+        self.rect = self.image.get_rect(center=self.pos)
+
+        self.hbr.centerx = self.pos.x
+        self.hbr.bottom = self.rect.top
+
+        self.hr.width = self.hbr.width * self.health/200
+        self.hr.left = self.hbr.left
+        self.hr.top = self.hbr.top
+
+        if self.health <= 0:
+            self.death_particles.update(dt)
+
+            if len(self.death_particles.particles) <= 5:
+                self.dead = True
+
+    def resolve_collision(self, e):
+        if (e.pos - self.pos).length_squared() <= (e.collider_radius + self.collider_radius)**2:
+            n =  (e.pos - self.pos).normalize()
+            p = e.collider_radius + self.collider_radius - (e.pos - self.pos).length()
+
+            e.pos += n*p/2
+            self.pos -= n*p/2
+
+    def draw(self, window):
+        if DRAW_COLLIDERS: pygame.draw.circle(window, gray(50), self.pos, self.collider_radius)
+
+        
+        if self.health > 0: window.blit(self.image, self.rect)
+        self.death_particles.draw(window)
+
+        ## drawing the health bar
+        if not len(self.death_particles.particles):
+            pygame.draw.rect(window, gray(30), self.hbr)
+            pygame.draw.rect(window, (180,20,20), self.hr)
+
+        if self.lasered:
+            pygame.draw.rect(window, gray(180), self.hbr, 3)
+
 
 class Scene:
     def __init__(self):
@@ -801,7 +919,18 @@ class Scene:
                 dist = u.cross(self.player.laser.dir)
                 same_side = (self.player.laser.dir).dot(e.pos - self.player.laser.pos)
                 if abs(dist) <= self.player.laser.width[0] and same_side >= 0:
-                    e.laserme()
+                    if e.id == 5:
+                        # self.enemies.extend(e.laserme())
+                        if e.can_spawn:
+                            e.can_spawn = False
+                            poss = [Bat, Jacko, Vampire, Ghost]
+                            self.enemies.append(random.choice(poss)(e.pos.copy() + self.player.laser.dir.rotate(90)*50))
+                            self.enemies[-1].update(dt, self.fire.pos)
+                            self.enemies.append(random.choice(poss)(e.pos.copy() - self.player.laser.dir.rotate(90)*50))
+                            self.enemies[-1].update(dt, self.fire.pos)
+                            e.laserme()
+                    else:
+                        e.laserme()
                     if e.id == 1:
                         e.health -= 40*dt
                     elif e.id == 2:
@@ -810,6 +939,8 @@ class Scene:
                     if e.id == 3:
                         e.health -= 40*dt
                     if e.id == 4:
+                        e.health -= 40*dt
+                    if e.id == 5:
                         e.health -= 40*dt
                 else:
                     e.delaserme()
@@ -845,6 +976,8 @@ class Scene:
                 self.enemies.append(Jacko(getMousePos()))
             if event.key == pygame.K_4:
                 self.enemies.append(Vampire(getMousePos()))
+            if event.key == pygame.K_5:
+                self.enemies.append(Witch(getMousePos()))
 
 
 s = Scene()
