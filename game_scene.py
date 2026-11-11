@@ -22,6 +22,11 @@ class Player:
         self.dust_pos = pos
         self.laser = Laser()
 
+        self.collider_radius = 40
+        self.stunned = False
+        self.stun_cooldown = Timer(3)
+        
+
         
     def load(self):
         self.walk_anim = {
@@ -36,7 +41,19 @@ class Player:
                 
         self.dust_particles = Dustparticles()
 
+    def stunme(self):
+        self.stun_cooldown.start()
+        self.stunned = True
+
     def update(self, dt):
+        if self.stunned: 
+            self.stun_cooldown.update(dt)
+
+            if self.stun_cooldown.is_over():
+                self.stun_cooldown.reset()
+                self.stunned = False
+
+            return
         keys = pygame.key.get_pressed()
 
         self.state = "idle"
@@ -507,6 +524,245 @@ class Ghost:
         if self.lasered:
             pygame.draw.rect(window, gray(180), self.hbr, 3)
 
+class Jacko:
+    def __init__(self, pos):
+        self.pos = pos 
+        self.id = 3
+        self.health = 120
+        self.death_particles = DeathParticles()
+
+        self.dead = False
+
+        self.load()
+
+    def load(self):
+        self.images = [load_image(f"assets/images/enemies/jacko/Jacko{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
+        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/jacko/Jacko{i}.png", 2, solid_overlay=(140,0,0)), gray(200), outline_thick=4, precision=8) for i in range(1,5)]
+
+        self.index = 0
+        self.anim_speed = 8
+        self.vel = vec2(0,0)
+        self.max_speed = 80
+        self.hurt_speed = 10
+        self.lasered = False
+
+        self.collider_radius = 40
+        self.floor_gap = 40
+
+        self.laser_pause = Timer(0.2)
+
+        self.flap_particles = Dustparticles()
+
+        self.hbr = pygame.Rect(0,0, 100, 10)
+        self.hr = pygame.Rect(0,0, self.hbr.width, self.hbr.height)
+
+    def laserme(self):
+        self.lasered = True
+        self.laser_pause.reset()
+        
+
+    def delaserme(self):
+        if self.lasered:
+            self.laser_pause.start()
+            self.lasered = False
+        
+    def blastme(self):
+        if not len(self.death_particles.particles):
+            self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
+
+
+    def update(self, dt, target_pos):
+        if not self.lasered:
+            self.vel = (target_pos-self.pos).normalize()*self.max_speed
+        else:
+            self.vel = (target_pos-self.pos).normalize()*self.hurt_speed
+
+        if self.laser_pause.started:
+            self.vel *= 0
+            self.laser_pause.update(dt)
+
+
+        if self.health > 0:
+            self.pos += self.vel*dt
+            self.last_index = self.index
+            self.index += self.anim_speed * dt
+
+            if len(self.flap_particles.particles) <= 5: 
+                for _ in range(random.randint(1,3)): self.flap_particles.add(self.pos + vec2(0, self.floor_gap) + genRandomVec(5))
+
+        self.index %= len(self.images)
+        self.flap_particles.update(dt)
+
+        
+
+        if (not self.lasered) and (not self.laser_pause.started):
+            self.image = self.images[int(self.index)]
+        else:
+            self.image = self.hurt_images[int(self.index)]
+        self.rect = self.image.get_rect(center=self.pos)
+
+        self.hbr.centerx = self.pos.x
+        self.hbr.bottom = self.rect.top
+
+        self.hr.width = self.hbr.width * self.health/120
+        self.hr.left = self.hbr.left
+        self.hr.top = self.hbr.top
+
+        if self.health <= 0:
+            self.death_particles.update(dt)
+
+            if len(self.death_particles.particles) <= 5:
+                self.dead = True
+
+    def resolve_collision(self, e):
+        if (e.pos - self.pos).length_squared() <= (e.collider_radius + self.collider_radius)**2:
+            n =  (e.pos - self.pos).normalize()
+            p = e.collider_radius + self.collider_radius - (e.pos - self.pos).length()
+
+            e.pos += n*p/2
+            self.pos -= n*p/2
+
+    def draw(self, window):
+        if DRAW_COLLIDERS: pygame.draw.circle(window, gray(50), self.pos, self.collider_radius)
+
+        
+        if self.health > 0: window.blit(self.image, self.rect)
+        self.death_particles.draw(window)
+        self.flap_particles.draw(window)
+
+        ## drawing the health bar
+        if not len(self.death_particles.particles):
+            pygame.draw.rect(window, gray(30), self.hbr)
+            pygame.draw.rect(window, (180,20,20), self.hr)
+
+        if self.lasered:
+            pygame.draw.rect(window, gray(180), self.hbr, 3)
+
+class Vampire:
+    def __init__(self, pos):
+        self.pos = pos 
+        self.id = 4
+        self.health = 120
+        self.death_particles = DeathParticles()
+
+        self.dead = False
+
+        self.load()
+
+    def load(self):
+        self.images = [load_image(f"assets/images/enemies/vampire/Vampire{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
+        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/vampire/Vampire{i}.png", 2, solid_overlay=(140,0,0)), gray(200), outline_thick=4, precision=8) for i in range(1,5)]
+
+        self.index = 0
+        self.anim_speed = 8
+        self.vel = vec2(0,0)
+        self.max_speed = 80
+        self.hurt_speed = 10
+        self.lasered = False
+
+        self.collider_radius = 40
+        self.floor_gap = 40
+
+        self.laser_pause = Timer(0.2)
+
+        self.flap_particles = Dustparticles()
+
+        self.stun_cooldown = Timer(9)
+        self.can_stun = True
+
+        self.hbr = pygame.Rect(0,0, 100, 10)
+        self.hr = pygame.Rect(0,0, self.hbr.width, self.hbr.height)
+
+    def laserme(self):
+        self.lasered = True
+        self.laser_pause.reset()
+        
+
+    def delaserme(self):
+        if self.lasered:
+            self.laser_pause.start()
+            self.lasered = False
+        
+    def blastme(self):
+        if not len(self.death_particles.particles):
+            self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
+
+
+    def update(self, dt, target_pos):
+        if not self.lasered:
+            self.vel = (target_pos-self.pos).normalize()*self.max_speed
+        else:
+            self.vel = (target_pos-self.pos).normalize()*self.hurt_speed
+
+        if self.laser_pause.started:
+            self.vel *= 0
+            self.laser_pause.update(dt)
+
+        if not self.can_stun:
+            self.stun_cooldown.update(dt)
+
+            if self.stun_cooldown.is_over():
+                self.can_stun = True
+                self.stun_cooldown.reset()
+                self.stun_cooldown.start()
+
+
+        if self.health > 0:
+            self.pos += self.vel*dt
+            self.last_index = self.index
+            self.index += self.anim_speed * dt
+
+            if len(self.flap_particles.particles) <= 5: 
+                for _ in range(random.randint(1,3)): self.flap_particles.add(self.pos + vec2(0, self.floor_gap) + genRandomVec(5))
+
+        self.index %= len(self.images)
+        self.flap_particles.update(dt)
+
+        
+
+        if (not self.lasered) and (not self.laser_pause.started):
+            self.image = self.images[int(self.index)]
+        else:
+            self.image = self.hurt_images[int(self.index)]
+        self.rect = self.image.get_rect(center=self.pos)
+
+        self.hbr.centerx = self.pos.x
+        self.hbr.bottom = self.rect.top
+
+        self.hr.width = self.hbr.width * self.health/120
+        self.hr.left = self.hbr.left
+        self.hr.top = self.hbr.top
+
+        if self.health <= 0:
+            self.death_particles.update(dt)
+
+            if len(self.death_particles.particles) <= 5:
+                self.dead = True
+
+    def resolve_collision(self, e):
+        if (e.pos - self.pos).length_squared() <= (e.collider_radius + self.collider_radius)**2:
+            n =  (e.pos - self.pos).normalize()
+            p = e.collider_radius + self.collider_radius - (e.pos - self.pos).length()
+
+            e.pos += n*p/2
+            self.pos -= n*p/2
+
+    def draw(self, window):
+        if DRAW_COLLIDERS: pygame.draw.circle(window, gray(50), self.pos, self.collider_radius)
+
+        
+        if self.health > 0: window.blit(self.image, self.rect)
+        self.death_particles.draw(window)
+        self.flap_particles.draw(window)
+
+        ## drawing the health bar
+        if not len(self.death_particles.particles):
+            pygame.draw.rect(window, gray(30), self.hbr)
+            pygame.draw.rect(window, (180,20,20), self.hr)
+
+        if self.lasered:
+            pygame.draw.rect(window, gray(180), self.hbr, 3)
+
 
 class Scene:
     def __init__(self):
@@ -529,7 +785,15 @@ class Scene:
         deleted = 0
         for i in range(len(self.enemies)):
             e = self.enemies[i-deleted]
-            e.update(dt, self.player.pos)
+
+            if e.id == 4:
+                if (e.pos - self.player.pos).length_squared() <= (e.collider_radius + self.player.collider_radius)**2:
+                    if e.can_stun: self.player.stunme()
+                    e.stun_cooldown.start()
+                    e.can_stun = False
+                    print("player is stunned!")
+
+            e.update(dt, self.fire.pos)
 
             if self.player.laser.begun:
                 #detect if enemy is being lsered
@@ -543,6 +807,10 @@ class Scene:
                     elif e.id == 2:
                         if not e.state == "invi":
                             e.health -= 40*dt
+                    if e.id == 3:
+                        e.health -= 40*dt
+                    if e.id == 4:
+                        e.health -= 40*dt
                 else:
                     e.delaserme()
 
@@ -573,6 +841,11 @@ class Scene:
                 self.enemies.append(Bat(getMousePos()))
             if event.key == pygame.K_2:
                 self.enemies.append(Ghost(getMousePos()))
+            if event.key == pygame.K_3:
+                self.enemies.append(Jacko(getMousePos()))
+            if event.key == pygame.K_4:
+                self.enemies.append(Vampire(getMousePos()))
+
 
 s = Scene()
 s.load()
