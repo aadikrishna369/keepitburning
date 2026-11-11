@@ -68,10 +68,6 @@ class Player:
             self.vel.x = 0
             self.vel.y= 0
 
-        
-
-
-
         self.dust_pos = self.pos.copy()
 
         r = (getMousePos() - self.pos).normalize()*40
@@ -124,6 +120,8 @@ class Laser:
         self.sa_part_done = False
         self.sa_timer = 0
 
+        self.charge = 100
+
         self.begun = False
 
         self.pos = vec2(0,0)
@@ -147,7 +145,9 @@ class Laser:
                 self.start_anim = True
 
     def end(self):
-        pass
+        self.begun = False
+        self.sa_timer = 0
+        self.sa_part_done = False
 
     def set_pos(self, pos):
         self.pos = pos    
@@ -233,12 +233,114 @@ class Laser:
 
             pygame.draw.polygon(window, gray(200), points)
 
-                
+class Fire:
+    def __init__(self, pos):
+        self.pos = pos 
+        self.health = 100
+
+    def update(self, dt):
+        pass
+
+    def draw(self, window):
+        pygame.draw.circle(window, (0,200,200), self.pos, 40*self.health/100)
+
+class Bat:
+    def __init__(self, pos):
+        pass
+
+    def update(self, dt):
+        pass
+
+    def draw(self, window):
+        pass         
+
+class Bat:
+    def __init__(self, pos):
+        self.pos = pos 
+        self.id = 1
+        self.health = 100
+
+        self.load()
+
+    def load(self):
+        self.images = [load_image(f"assets/images/enemies/bat/Bat{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
+        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/bat/Bat{i}.png", 2, solid_overlay=(140,0,0)), gray(200), outline_thick=4, precision=8) for i in range(1,5)]
+
+        self.index = 0
+        self.anim_speed = 8
+        self.vel = vec2(0,0)
+        self.max_speed = 80
+        self.hurt_speed = 10
+        self.lasered = False
+
+        self.collider_radius = 40
+
+        self.laser_pause = Timer(0.2)
+
+    def laserme(self):
+        self.lasered = True
+        self.laser_pause.reset()
+        
+
+    def delaserme(self):
+        if self.lasered:
+            self.laser_pause.start()
+            self.lasered = False
+        
+
+    def update(self, dt, target_pos):
+        if not self.lasered:
+            self.vel = (target_pos-self.pos).normalize()*self.max_speed
+        else:
+            self.vel = (target_pos-self.pos).normalize()*self.hurt_speed
+
+        if self.laser_pause.started:
+            self.vel *= 0
+            self.laser_pause.update(dt)
+
+        # print(self.laser_pause.timer)
+
+        self.pos += self.vel*dt
+
+
+        self.last_index = self.index
+        self.index += self.anim_speed * dt
+
+        if math.floor(self.last_index) != math.floor(self.index):
+            if math.floor(self.index) == 2:
+                print("flap")
+            #print("index changed")
+
+        self.index %= len(self.images)
+
+        
+
+        if (not self.lasered) and (not self.laser_pause.started):
+            self.image = self.images[int(self.index)]
+        else:
+            self.image = self.hurt_images[int(self.index)]
+        self.rect = self.image.get_rect(center=self.pos)
+
+    def resolve_collision(self, e):
+        if (e.pos - self.pos).length_squared() <= (e.collider_radius + self.collider_radius)**2:
+            n =  (e.pos - self.pos).normalize()
+            p = e.collider_radius + self.collider_radius - (e.pos - self.pos).length()
+
+            e.pos += n*p/2
+            self.pos -= n*p/2
+
+    def draw(self, window):
+        if DRAW_COLLIDERS: pygame.draw.circle(window, gray(50), self.pos, self.collider_radius)
+        window.blit(self.image, self.rect)
 
 
 class Scene:
     def __init__(self):
-        self.player = Player(RES/2)
+        self.player = Player(RES/2 + vec2(0,200))
+        self.fire = Fire(RES/2)
+
+        self.enemies = []
+
 
     def load(self):
         self.player.load()
@@ -247,14 +349,48 @@ class Scene:
         del self
 
     def update(self, dt):
+        self.fire.update(dt)
         self.player.update(dt)
+
+        deleted = 0
+        for i in range(len(self.enemies)):
+            e = self.enemies[i-deleted]
+            e.update(dt, self.player.pos)
+
+            if self.player.laser.begun:
+                #detect if enemy is being lsered
+                u = e.pos - self.player.laser.pos
+                dist = u.cross(self.player.laser.dir)
+                same_side = (self.player.laser.dir).dot(e.pos - self.player.laser.pos)
+                if abs(dist) <= self.player.laser.width[0] and same_side >= 0:
+                    e.laserme()
+                    e.health -= 40*dt
+                else:
+                    e.delaserme()
+
+            if not self.player.laser.begun :
+                e.delaserme()
+            if e.health <= 0:
+                self.enemies.remove(e)
+                deleted += 1
+
+            if i-deleted <= len(self.enemies)-2:
+                for j in range(i+1, len(self.enemies)):
+                    e.resolve_collision(self.enemies[j])
+            
 
 
     def draw(self, window):
+        self.fire.draw(window)
         self.player.draw(window)
 
+        for e in self.enemies:
+            e.draw(window)
+
     def event_update(self, event):
-        pass
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_1:
+                self.enemies.append(Bat(getMousePos()))
 
 s = Scene()
 s.load()
