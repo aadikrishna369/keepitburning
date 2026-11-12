@@ -54,6 +54,8 @@ class Scene:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 self.scene_over = True
+        elif event.type == pygame.KEYDOWN:
+            self.scene_over = True
 
 def main():
     RES = resolution

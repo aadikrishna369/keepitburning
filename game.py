@@ -2,6 +2,7 @@ from utils import *
 
 from menu_scene import Scene as Scene1
 from game_scene import Scene as Scene2
+from game_over_scene import Scene as Scene3
 
 
 RES = resolution
@@ -37,7 +38,7 @@ class Application:
 
         print(time.perf_counter() - s)
 
-        self.scenes = [Scene1, Scene2]
+        self.scenes = [Scene1, Scene2, Scene3]
 
 
         self.currentSceneId = 0

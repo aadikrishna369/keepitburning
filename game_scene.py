@@ -1085,7 +1085,10 @@ class Scene:
             if i-deleted <= len(self.enemies)-2:
                 for j in range(i+1, len(self.enemies)):
                     e.resolve_collision(self.enemies[j])
-            
+
+
+        if self.fire.health <= 0:
+            self.scene_over = True
 
 
     def draw(self, window):
