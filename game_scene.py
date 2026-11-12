@@ -3,9 +3,6 @@ from particles import *
 
 RES = resolution
 
-window = pygame.display.set_mode(RES)
-pygame.display.set_caption("Keep it Burning")
-
 class Player:
     def __init__(self, pos):
         self.pos = pos
@@ -25,6 +22,8 @@ class Player:
         self.collider_radius = 40
         self.stunned = False
         self.stun_cooldown = Timer(3)
+
+        self.load()
         
 
         
@@ -218,6 +217,13 @@ class Laser:
 
         self.mana_rect.center = self.pos
 
+        ##bulges
+        for b in self.bulges:
+            b[0] += dt
+            
+            if b[0] >= 1:
+                self.bulges.remove(b)
+
     def draw(self, window):
         if self.start_anim:
             if not self.sa_part_done:
@@ -252,10 +258,7 @@ class Laser:
 
                 ##bulges
                 for b in self.bulges:
-                    b[0] += dt
                     pygame.draw.circle(window, self.colors[-1], self.pos + self.dir*1500*b[0], int(b[1]))
-                    if b[0] >= 0.5:
-                        self.bulges.remove(b)
 
 
             ## the overlay stuff
@@ -964,7 +967,8 @@ class Thunderbolt:
         pygame.draw.circle(window, gray(220), self.end_pos, 50)
 
 class Scene:
-    def __init__(self):
+    def __init__(self, sm):
+        self.scene_over = False
         self.player = Player(RES/2 + vec2(0,200))
         self.fire = Fire(RES/2)
 
@@ -1114,30 +1118,40 @@ class Scene:
                 self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
 
 
-s = Scene()
-s.load()
 
-running = True
-dt = 1/60
-clock = pygame.time.Clock()
+def main():
+    RES = resolution
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    window = pygame.display.set_mode(RES)
+    pygame.display.set_caption("Keep it Burning")
 
-        s.event_update(event)
+    s = Scene()
+    s.load()
 
-    if not running:
-        break
+    running = True
+    dt = 1/60
+    clock = pygame.time.Clock()
 
-    dt = clock.tick(120) / 1000
-    s.update(dt)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-    window.fill(gray(20))
-    s.draw(window)
+            s.event_update(event)
 
-    pygame.display.flip()
+        if not running:
+            break
 
-s.unload()
-pygame.quit()
+        dt = clock.tick(120) / 1000
+        s.update(dt)
+
+        window.fill(gray(20))
+        s.draw(window)
+
+        pygame.display.flip()
+
+    s.unload()
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()

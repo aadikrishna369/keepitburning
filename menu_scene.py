@@ -3,12 +3,9 @@ from particles import *
 
 RES = resolution
 
-window = pygame.display.set_mode(RES)
-pygame.display.set_caption("Keep it Burning")
-
-
 class Scene:
-    def __init__(self):
+    def __init__(self, sm):
+        self.scene_over = False
         self.font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 180)
         self.t = self.font.render("KeepItBurning", True, gray(200), None)
         self.r = self.t.get_rect(center=RES/2)
@@ -54,32 +51,43 @@ class Scene:
         window.blit(self.t2, self.r2)
 
     def event_update(self, event):
-        pass
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                self.scene_over = True
 
-s = Scene()
-s.load()
+def main():
+    RES = resolution
 
-running = True
-dt = 1/60
-clock = pygame.time.Clock()
+    window = pygame.display.set_mode(RES)
+    pygame.display.set_caption("Keep it Burning")
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    s = Scene()
+    s.load()
 
-        s.event_update(event)
+    running = True
+    dt = 1/60
+    clock = pygame.time.Clock()
 
-    if not running:
-        break
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-    dt = clock.tick(120) / 1000
-    s.update(dt)
+            s.event_update(event)
 
-    window.fill(gray(20))
-    s.draw(window)
+        if not running:
+            break
 
-    pygame.display.flip()
+        dt = clock.tick(120) / 1000
+        s.update(dt)
 
-s.unload()
-pygame.quit()
+        window.fill(gray(20))
+        s.draw(window)
+
+        pygame.display.flip()
+
+    s.unload()
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
