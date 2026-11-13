@@ -4,13 +4,17 @@ from particles import *
 RES = resolution
 
 class Scene:
-    def __init__(self, sm):
+    def __init__(self, sm, am):
         self.scene_over = False
         self.font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 180)
-        self.t = self.font.render("You couldn't make it", True, gray(200), None)
+        self.font1 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 80)
+        self.font2 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 40)
+
+
+        self.t = self.font.render("The MONSTERS won", True, gray(200), None)
         self.r = self.t.get_rect(center=RES/2)
 
-        self.font2 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 40)
+        
         self.t2 = self.font2.render("Press any key to RESTART", True, gray(130), None)
         self.r2 = self.t2.get_rect(center = RES/2 + vec2(0,200))
         self.t2_y = vec2(0,200)
@@ -49,6 +53,7 @@ class Scene:
 
         window.blit(self.t, self.r)
         window.blit(self.t2, self.r2)
+        pygame.draw.line(window, gray(200), (self.r.centerx-300 , self.r.bottom+10), (self.r.centerx + 260, self.r.bottom+10), 5)
 
     def event_update(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -63,7 +68,7 @@ def main():
     window = pygame.display.set_mode(RES)
     pygame.display.set_caption("Keep it Burning")
 
-    s = Scene()
+    s = Scene(None, None)
     s.load()
 
     running = True

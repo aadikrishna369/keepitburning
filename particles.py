@@ -39,7 +39,7 @@ class RainParticles:
             #     pygame.draw.circle(window, gray(200), self.trail[i], self.head_radius*i/len(self.trail))
             # pygame.draw.circle(window, gray(200), self.pos, self.head_radius)
 
-            pygame.draw.line(window, gray(200), self.pos, self.trail[0], int(4*(1-self.depth)))
+            pygame.draw.line(window, gray(160), self.pos, self.trail[0], int(4*(1-self.depth)))
 
             
     def __init__(self, max_pos):

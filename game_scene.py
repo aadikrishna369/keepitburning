@@ -1264,199 +1264,9 @@ class Thunderbolt:
 
         if self.draw_boom: pygame.draw.circle(window, self.color, self.end_pos, 50)
 
-class AdvancementManager:
-    def __init__(self):
-        self.queue = []
-        self.advancements = []
-
-        self.f1 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 50)
-        self.f2 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 30)
-        self.f3 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 40)
-
-        self.mt = self.f3.render("ACHIEVEMENT UNLOCKED", True, PALLETE["fg1"], None)
-        self.mr = self.mt.get_rect(topleft=(50,0))
-
-        self.trans_in_timer = Timer(0.1)
-        self.trans_in_timer.start()
-
-        self.trans_out_timer = Timer(0.2)
-        self.trans_out_timer.start()
-
-        self.stay_timer = Timer(2.3)
-        self.stay_timer.start()
-
-
-        self.state = "none"
-
-        self.card_dimensions = vec2(350,100)
-        self.card_rect = pygame.Rect(0,0,int(self.card_dimensions.x), int(self.card_dimensions.y))
-
-        self.card_pos_start = vec2(200, -200)
-        self.card_pos_end = vec2(200, 100)
-        self.tier_colors = {
-            1:"#A5A7AA",
-            2:"#36C879",
-            3:"#38A9FF",
-            4:"#B46AFF",
-            5:"#FFB52E",
-            6:"#E04444"
-
-        }
-        self.card_outline_thick = 3
-        self.card_radius = 5
-
-        self.monsters_killed = 0
-        self.killed = {
-            "bats":0,
-            "ghosts":0,
-            "jackos":0,
-            "witches":0,
-            "vampires":0
-        }
-        self.monster_names = ["bats","ghosts","jackos","witches","vampires"]
-        self.deaths = 0
-        self.playtime = 0
-        self.laserTime = 0
-        self.maxWave = 0
-        self.fireDamage = 0
-
-        
-
-
-    def logKill(self, data):
-        self.monsters_killed += 1
-        self.killed[self.monster_names[data.id-1]] += 1
-
-
-    def logWave(self, data):
-        if data > self.maxWave:
-            self.maxWave = data
-
-    def logDeath(self):
-        self.deaths += 1
-
-    def logLaserTime(self, dt):
-        self.laserTime += dt
-
-    def logPlayTime(self, dt):
-        self.playtime += dt
-
-    def logFireDamage(self, damage):
-        self.fireDamage += damage
-
-
-    def add(self, title, body, tier=1):
-        ## create a card for the advancement
-        if title in self.advancements:
-            return
-        self.advancements.append(title)
-        surf = pygame.Surface(self.card_dimensions)
-        surf.fill((0,0,0))
-        surf.set_colorkey((0,0,0))
-
-
-        pygame.draw.rect(surf, PALLETE["bg2"], (0,0,self.card_dimensions.x, self.card_dimensions.y), border_radius=self.card_radius)
-        pygame.draw.rect(surf, self.tier_colors[tier], (0,0,self.card_dimensions.x, self.card_dimensions.y), width=self.card_outline_thick ,border_radius=self.card_radius)
-
-        t1 = self.f1.render(str(title), True, PALLETE["fg1"], None, int(self.card_dimensions.x-40))
-        r1 = t1.get_rect()
-        r1.centerx = self.card_dimensions.x/2
-        r1.top = 10
-
-
-        t2 = self.f2.render(str(body), True, PALLETE["fg1"], None, int(self.card_dimensions.x-40))
-        r2 = t2.get_rect()
-
-        r2.centerx = self.card_dimensions.x/2
-        r2.top = r1.bottom + 10
-
-        surf.blit(t1,r1)
-        surf.blit(t2, r2)
-
-        self.ease_function = linear
-
-
-
-        self.queue.append(surf)
-        if self.state == "none":
-            self.state = "trans-in" 
-
-    def update(self, dt):
-        if self.state == "trans-in":
-            self.trans_in_timer.update(dt)
-            self.card_rect.centerx = self.card_pos_start.x + (self.card_pos_end.x - self.card_pos_start.x)*self.ease_function(self.trans_in_timer.factor)
-            self.card_rect.centery = self.card_pos_start.y + (self.card_pos_end.y - self.card_pos_start.y)*self.ease_function(self.trans_in_timer.factor)
-
-            if self.trans_in_timer.is_over():
-                self.trans_in_timer.reset()
-                self.trans_in_timer.start()
-                self.state = "stay"
-
-        elif self.state == "stay":
-            self.stay_timer.update(dt)
-            self.card_rect.centerx = self.card_pos_end.x
-            self.card_rect.centery = self.card_pos_end.y
-
-            if self.stay_timer.is_over():
-                self.stay_timer.reset()
-                self.stay_timer.start()
-                self.state = "trans-out"
-
-        elif self.state == "trans-out":
-            self.trans_out_timer.update(dt)
-            self.card_rect.centerx = self.card_pos_end.x + (self.card_pos_start.x - self.card_pos_end.x)*self.ease_function(self.trans_out_timer.factor)
-            self.card_rect.centery = self.card_pos_end.y + (self.card_pos_start.y - self.card_pos_end.y)*self.ease_function(self.trans_out_timer.factor)
-
-            if self.trans_out_timer.is_over():
-                self.trans_out_timer.reset()
-                self.trans_out_timer.start()
-                self.queue.pop(0)
-
-                if len(self.queue):
-                    self.state = "trans-in"
-                    self.card_rect.centerx = self.card_pos_start.x
-                    self.card_rect.centery = self.card_pos_start.y
-
-                else:
-                    self.state = "none"
-
-        ## advancements
-        if self.monsters_killed >= 100:
-            self.add("Pest Control", "Kill 100 monsters", 2)
-        
-        if self.monsters_killed >= 500:
-            self.add("Exterminator", "Kill 500 monsters", 3)
-
-        if self.monsters_killed >= 1000:
-            self.add("Genocide", "Eliminate 1000 monsters", 4)
-
-        if self.maxWave >= 5:
-            self.add("Still Breathing", "Survive first 5 waves", 2)
-
-        if self.maxWave >= 10:
-            self.add("Built Different", "Survive 10 waves", 3)
-
-        if self.maxWave == 5 and self.fireDamage == 0:
-            self.add("Flawless", "Survive 5 waves without damage", 3)
-
-        if self.deaths >= 1:
-            self.add("First Death", "Experience your first death", 3)
-
-        if self.playtime >= 5*60:
-            self.add("Just one more", "Play the game for 5 min", 4)
-        
-                
-
-
-    def draw(self, window):
-        if self.state != "none":
-            window.blit(self.queue[0], self.card_rect)
-
-        if len(self.queue):
-            window.blit(self.mt, self.mr)
 
 class Scene:
-    def __init__(self, sm):
+    def __init__(self, sm, am):
         self.scene_over = False
         self.player = Player(RES/2 + vec2(0,200))
         self.fire = Fire(RES/2)
@@ -1468,7 +1278,7 @@ class Scene:
         self.mana_particle_delay.start()
 
         self.wave_mgr = WaveManager(self.waveIsFinished)
-        self.adv_mgr = AdvancementManager()
+        self.adv_mgr = am
 
         self.pause_surf = pygame.Surface(RES)
         self.pause_surf.fill((30,30,30))
@@ -1734,7 +1544,6 @@ class Scene:
             bolt.draw(window)
 
         self.wave_mgr.draw(window)
-        self.adv_mgr.draw(window)
 
         if self.show_fire_text:
             window.blit(self.fire_text, self.fire_rect)
