@@ -1207,6 +1207,15 @@ class Scene:
         self.wave_mgr = WaveManager()
         self.adv_mgr = AdvancementManager()
 
+        self.pause_surf = pygame.Surface(RES)
+        self.pause_surf.fill((30,30,30))
+
+        self.pause_font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 200)
+        self.pause_text = self.pause_font.render("PAUSED", True, PALLETE["fg1"], None)
+        self.pause_rect = self.pause_text.get_rect(center=RES/2)
+
+        self.paused = False
+
     def load(self):
         self.player.load()
 
@@ -1214,6 +1223,8 @@ class Scene:
         del self
 
     def update(self, dt):
+        if self.paused:
+            return
         e = self.wave_mgr.update(dt)
         self.adv_mgr.update(dt)
         if e:
@@ -1336,6 +1347,7 @@ class Scene:
 
     def draw(self, window):
         
+
         self.mana_particles.draw(window)
         self.fire.draw(window)
         self.player.draw(window)
@@ -1348,6 +1360,10 @@ class Scene:
 
         self.wave_mgr.draw(window)
         self.adv_mgr.draw(window)
+
+        if self.paused:
+            window.blit(self.pause_surf, (0,0), special_flags=pygame.BLEND_RGB_MULT)
+            window.blit(self.pause_text, self.pause_rect)
 
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
@@ -1369,6 +1385,9 @@ class Scene:
 
             if event.key == pygame.K_q:
                 self.adv_mgr.add(*random.choice(ADVANCEMENTS), random.randint(1,6))
+
+            if event.key == pygame.K_ESCAPE:
+                self.paused = not self.paused
 
 
 
