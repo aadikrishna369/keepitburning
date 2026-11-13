@@ -45,7 +45,7 @@ class RainParticles:
     def __init__(self, max_pos):
         self.direction = vec2(-10, -10).normalize()
         self.particles = []
-        self.gravity = vec2(0,400)
+        self.gravity = vec2(0,500)
         self.max_pos = max_pos
 
 

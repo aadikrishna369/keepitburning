@@ -23,9 +23,10 @@ class Player:
         self.stunned = False
         self.stun_cooldown = Timer(3)
 
-        self.load()
-        
+        self.last_walk_index = 0
+        self.footstep_sfx = True
 
+        self.load()
         
     def load(self):
         self.walk_anim = {
@@ -44,7 +45,7 @@ class Player:
         self.stun_cooldown.start()
         self.stunned = True
 
-    def update(self, dt):
+    def update(self, dt, sm):
         if self.stunned: 
             self.stun_cooldown.update(dt)
 
@@ -77,12 +78,24 @@ class Player:
 
         if self.dir.length():
             self.vel = self.dir.normalize() * self.max_speed
+
+            self.last_walk_index = self.walk_index
+
             self.walk_index += self.walk_speed * dt
             self.walk_index %= len(self.walk_anim)
             self.last_dir = self.dir.copy()
+
+            if math.floor(self.last_walk_index) != math.floor(self.walk_index):
+                if math.floor(self.last_walk_index) == 0:
+                    sm.play("foot1")
+                elif math.floor(self.last_walk_index) == 2:
+                    sm.play("foot1")
+
+
         else:
             self.vel.x = 0
             self.vel.y= 0
+        
 
         self.dust_pos = self.pos.copy()
 
@@ -370,9 +383,10 @@ class Bat:
             self.laser_pause.start()
             self.lasered = False
         
-    def blastme(self):
+    def blastme(self, sm):
         if not len(self.death_particles.particles):
             self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
+            sm.play("explode")
 
 
     def update(self, dt, target_pos):
@@ -502,10 +516,10 @@ class Ghost:
             self.laser_pause.start()
             self.lasered = False
         
-    def blastme(self):
+    def blastme(self, sm):
         if not len(self.death_particles.particles):
             self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
-
+            sm.play("explode")
 
     def update(self, dt, target_pos):
         if not self.lasered:
@@ -626,16 +640,15 @@ class Jacko:
         self.lasered = True
         self.laser_pause.reset()
         
-
     def delaserme(self):
         if self.lasered:
             self.laser_pause.start()
             self.lasered = False
         
-    def blastme(self):
+    def blastme(self, sm):
         if not len(self.death_particles.particles):
             self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
-
+            sm.play("explode")
 
     def update(self, dt, target_pos):
         if not self.lasered:
@@ -744,8 +757,6 @@ class Vampire:
         self.hr = pygame.Rect(0,0, self.hbr.width, self.hbr.height)
         self.dist_teleport = 160
 
-        
-
     def laserme(self, laser_dir=vec2(1,0)):
         if not self.can_teleport:
             self.lasered = True
@@ -761,16 +772,15 @@ class Vampire:
 
             #code for teleportation logic
         
-
     def delaserme(self):
         if self.lasered:
             self.laser_pause.start()
             self.lasered = False
         
-    def blastme(self):
+    def blastme(self, sm):
         if not len(self.death_particles.particles):
             self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
-
+            sm.play("explode")
 
     def update(self, dt, target_pos):
         if not self.lasered:
@@ -901,16 +911,15 @@ class Witch:
         self.laser_pause.reset()
         self.laser_pause.start()
         
-
     def delaserme(self):
         if self.lasered:
             self.laser_pause.reset()
             self.lasered = False
         
-    def blastme(self):
+    def blastme(self, sm):
         if not len(self.death_particles.particles):
             self.death_particles.add(self.pos, self.collider_radius, self.pos.y + self.floor_gap)
-
+            sm.play("explode")
 
     def update(self, dt, target_pos):
         if not self.lasered:
@@ -1225,6 +1234,8 @@ class Thunderbolt:
         self.start_pos = start
         self.end_pos = end 
 
+        self.sfx_played = False
+
         self.precision = precision
         self.width = width
         self.regen_timer = Timer(0.08)
@@ -1241,7 +1252,6 @@ class Thunderbolt:
         self.dir = (self.end_pos-self.start_pos).normalize()
         self.length = (self.end_pos - self.start_pos).length()
         self.divisions_length = self.length/len(self.displacements)
-
 
     def update(self, dt):
         self.regen_timer.update(dt)
@@ -1267,6 +1277,7 @@ class Thunderbolt:
 
 class Scene:
     def __init__(self, sm, am):
+        self.sound_manager = sm
         self.scene_over = False
         self.player = Player(RES/2 + vec2(0,200))
         self.fire = Fire(RES/2)
@@ -1307,7 +1318,12 @@ class Scene:
         self.setFireText("Use WASD to move")
         self.show_fire_text = True
 
-    # def reinit()
+        self.laser_sfx_playing = False
+
+        self.playing_laser_burn_sfx = False
+        self.play_laser_burn_sfx = False
+
+        self.sound_manager.loop("bgm")
 
     def waveIsFinished(self):
         self.wave_ongoing = False
@@ -1317,7 +1333,6 @@ class Scene:
         if self.tutorial_state == 4:
             self.tutorial_state = 5
             self.doTutorialState()
-
 
     def doTutorialState(self):
         if self.tutorial_state == 1:
@@ -1343,11 +1358,22 @@ class Scene:
         self.player.load()
 
     def unload(self):
+        self.sound_manager.stop("bgm")
         del self
 
     def update(self, dt):
         if self.player.stunned:
             self.stun_rect.center = RES/2  + genRandomVec(10)
+
+        if self.player.laser.begun:
+            if not self.laser_sfx_playing:
+                self.laser_sfx_playing = True
+                self.sound_manager.loop("fire2")
+            self.sound_manager.set_vol("fire2", self.player.laser.mana*self.sound_manager.fire_volume/100)
+        else:
+            if self.laser_sfx_playing:
+                self.sound_manager.stop("fire2")
+                self.laser_sfx_playing = False
 
         if self.paused:
             return
@@ -1398,10 +1424,15 @@ class Scene:
         for bolt in self.bolts:
             bolt.update(dt)
 
+            if not bolt.sfx_played:
+                bolt.sfx_played = True
+                self.sound_manager.play("thunder_clap")
+                
             if bolt.lifetime.is_over():
                 self.bolts.remove(bolt)
+                
 
-        self.player.update(dt)
+        self.player.update(dt, self.sound_manager)
 
         if self.player.laser.begun:
             if self.tutorial_state == 2: 
@@ -1465,11 +1496,14 @@ class Scene:
             if (e.pos - self.fire.pos).length_squared() <= (e.collider_radius + self.fire.collider_radius)**2:
                 if e.health > 0:
                     ## colliding with fire
-                    e.blastme()
+                    e.blastme(self.sound_manager)
+                    self.sound_manager.play("explode")
                     e.health = -10
                     self.fire.health -= 10
                     self.adv_mgr.logFireDamage(10)
                     self.adv_mgr.add("Help Fire?", "Fire kills any monster", 2)
+
+            self.play_laser_burn_sfx = False
 
             if self.player.laser.begun:
                 #detect if enemy is being lsered
@@ -1484,17 +1518,28 @@ class Scene:
                             e.should_spawn = True
 
                         e.laserme()
+
                     elif e.id == 4:
                         bolts = e.laserme()
                         if bolts:
                             self.bolts.extend(bolts)
                     else:
+                        if e.id == 2:
+                            if not e.lasered:
+                                if not e.state == "invi":
+                                    self.sound_manager.play("laser_caught")
+                        else:
+                            if not e.lasered:
+                                self.sound_manager.play("laser_caught")
                         e.laserme()
+
                     if e.id == 1:
                         e.health -= 40*dt
+
                     elif e.id == 2:
                         if not e.state == "invi":
                             e.health -= 40*dt
+
                     if e.id == 3:
                         e.health -= 40*dt
                     if e.id == 4:
@@ -1505,6 +1550,10 @@ class Scene:
                     if e.health <= 0:
                         if self.wave_mgr.waveid == 1:
                             self.adv_mgr.add("First Blood", "Kill you first monster", 2)
+
+
+                    self.play_laser_burn_sfx = True
+
                 else:
                     e.delaserme()
 
@@ -1512,9 +1561,12 @@ class Scene:
                 e.delaserme()
 
             if e.health <= 0:
-                e.blastme()
+                e.blastme(self.sound_manager)
+                
+                
 
             if e.dead:
+                
                 self.enemies.remove(e)
                 self.wave_mgr.monsterKilled()
 
@@ -1531,6 +1583,17 @@ class Scene:
             self.adv_mgr.logDeath()
 
         self.adv_mgr.logPlayTime(dt)
+
+
+        ## sfx - laser burning
+        # if self.play_laser_burn_sfx:
+        #     if not self.playing_laser_burn_sfx:
+        #         self.sound_manager.loop("laser_burn")
+        #         self.playing_laser_burn_sfx = True
+        # else:
+        #     if self.playing_laser_burn_sfx:
+        #         self.sound_manager.stop("laser_burn")
+        #         self.playing_laser_burn_sfx = False
 
     def draw(self, window):
         self.mana_particles.draw(window)
@@ -1557,7 +1620,6 @@ class Scene:
             window.blit(self.pause_surf, (0,0), special_flags=pygame.BLEND_RGB_MULT)
             window.blit(self.pause_text, self.pause_rect)
 
-
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_1:
@@ -1573,18 +1635,24 @@ class Scene:
                 self.enemies.append(Vampire(getMousePos()))
                 self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
             if event.key == pygame.K_5:
-                self.enemies.append(Witch(getMousePos()))
-                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
-
+                self.adv_mgr.add(*random.choice(advancements), 3)
 
             if event.key in (pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d): 
                 if self.tutorial_state == 1:
                     self.tutorial_state = 2
                     self.doTutorialState()
-                    self.adv_mgr.add("Bad Decision", "Start to play the game", 1)
+                    
 
             if event.key == pygame.K_ESCAPE:
                 self.paused = not self.paused
+
+            if event.key == pygame.K_SPACE:
+                self.sound_manager.play("fire1")
+
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                self.sound_manager.stop("fire2")
+                self.laser_sfx_playing = False
 
 
 
@@ -1594,7 +1662,13 @@ def main():
     window = pygame.display.set_mode(RES)
     pygame.display.set_caption("Keep it Burning")
 
-    s = Scene(None)
+    from game import SoundManager, AdvancementManager
+    sm = SoundManager()
+    sm.load_audio()
+
+    am = AdvancementManager(sm)
+
+    s = Scene(sm, am)
     s.load()
 
     running = True
@@ -1613,9 +1687,11 @@ def main():
 
         dt = clock.tick(120) / 1000
         s.update(dt)
+        am.update(dt)
 
         window.fill(gray(20))
         s.draw(window)
+        am.draw(window)
 
         pygame.display.flip()
 
