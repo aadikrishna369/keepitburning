@@ -957,17 +957,12 @@ class Witch:
 
 class WaveManager:
     def __init__(self):
-        self.waveid = 1
-
-        self.wave_progress = 10
+        ## UI PROPS
         self.pgb_gap = 10
         self.pgb_extend = 50
         self.pgb_height = 15
         
         self.fg = gray(220)
-
-        
-
         self.font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 150)
 
         self.t = self.font.render(f"WAVE {int(self.waveid)}", True, self.fg, None)
@@ -980,11 +975,21 @@ class WaveManager:
         self.pgb_head = pygame.Rect(0,0,int(self.pgb_height/2),self.pgb_height)
         self.pgb_head.centery = self.pgb_ends[0][1]
 
+
         ## wave properites
+
+        self.waveid = 1
+        self.wave_progress = 0
+
+        self.total_monsters = 0
+        self.monsters_killed = 0
+
         self.spawn_cooldown = Timer(5)
         self.spawn_cooldown.start()
-        self.monsters = 0
-        self.total_monsters = 0
+        
+
+        self.started = False
+        self.state = "none"
 
 
 
@@ -1216,6 +1221,19 @@ class Scene:
 
         self.paused = False
 
+        ## fire text
+        self.tutorial_state = 0
+        self.fire_font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 40)
+        self.setFireText("Use WASD to move")
+        self.show_fire_text = True
+
+
+    def setFireText(self, text):
+        self.fire_text = self.fire_font.render(str(text), True, PALLETE["fg1"], None)
+        self.fire_rect = self.fire_text.get_rect()
+        self.fire_rect.centerx = self.fire.pos.x
+        self.fire_rect.centery = self.fire.pos.y - self.fire.collider_radius - 30
+
     def load(self):
         self.player.load()
 
@@ -1361,9 +1379,13 @@ class Scene:
         self.wave_mgr.draw(window)
         self.adv_mgr.draw(window)
 
+        if self.show_fire_text:
+            window.blit(self.fire_text, self.fire_rect)
+
         if self.paused:
             window.blit(self.pause_surf, (0,0), special_flags=pygame.BLEND_RGB_MULT)
             window.blit(self.pause_text, self.pause_rect)
+
 
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
