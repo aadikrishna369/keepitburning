@@ -1,6 +1,6 @@
 import pygame, time, math, random
 
-# pygame.init()
+pygame.init()
 
 vec2 = pygame.math.Vector2
 resolution = vec2(1280, 720)

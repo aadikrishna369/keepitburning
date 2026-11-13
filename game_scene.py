@@ -289,21 +289,42 @@ class Fire:
 
         self.amb_particles = AmbientParticles()
 
+        self.bolts = []
+        self.bolt_timer = Timer(2)
+        self.bolt_timer.start()
+
     def update(self, dt):
         self.breathe_anim_counter += self.breathe_anim_speed * dt
 
         if len(self.amb_particles.particles) <= 20:
-            print("Aded")
+            # print("Aded")
             for _ in range(random.randint(1,5)): self.amb_particles.add(self.pos.copy() + genRandomVec()*20)
 
         self.amb_particles.update(dt)
 
         self.pos = self.base_pos + vec2(0, math.sin(math.radians(self.breathe_anim_counter))*2.5)
 
+        self.bolt_timer.update(dt)
+
+        if self.bolt_timer.is_over():
+            self.bolt_timer.reset()
+            self.bolt_timer.start()
+
+            self.bolts.append(Thunderbolt(self.pos, self.pos + genRandomVec(2.5*self.collider_radius), color=(0,200,200), draw_boom=0, width=3))
+
+        for bolt in self.bolts:
+            bolt.update(dt)
+
+            if bolt.lifetime.is_over():
+                self.bolts.remove(bolt)
+
     def draw(self, window):
         pygame.draw.circle(window, (0,200,200), self.pos, 30)
         pygame.draw.arc(window, (0,200,200), self.ring_rect, 0, math.radians(360), 5)
         pygame.draw.arc(window, (180,20,20), self.ring_rect, 0, -math.radians(360*(self.health/100)), 5)
+
+        for bolt in self.bolts:
+            bolt.draw(window)
 
         self.amb_particles.draw(window)
 
@@ -520,7 +541,7 @@ class Ghost:
                 self.invi_timer.start()
                 for i in self.images: i.set_alpha(255)
                 self.can_invi = False
-                print("waht")
+                # print("waht")
 
 
         self.index %= len(self.images)
@@ -926,17 +947,20 @@ class Witch:
             pygame.draw.rect(window, gray(180), self.hbr, 3)
 
 class Thunderbolt:
-    def __init__(self, start, end):
+    def __init__(self, start, end, precision=4, lifetime=0.2, width=7, color=(200,200,200), draw_boom=True):
         self.start_pos = start
         self.end_pos = end 
-        self.precision = 4
-        self.width = 7
+
+        self.precision = precision
+        self.width = width
         self.regen_timer = Timer(0.08)
         self.regen_timer.start()
 
-        self.lifetime = Timer(0.2)
+        self.lifetime = Timer(lifetime)
         self.lifetime.start()
 
+        self.color = color
+        self.draw_boom = draw_boom
         self.max_dis = 20
         self.displacements = [random.randint(-self.max_dis, self.max_dis) for _ in range(2**(self.precision) - 1)]
 
@@ -960,11 +984,11 @@ class Thunderbolt:
         #pygame.draw.line(window, gray(220), self.start_pos, self.end_pos, self.width)
 
         for i in range(len(self.displacements)):
-            start = self.start_pos + self.dir*self.divisions_length*i + vec2(self.displacements[i], 0)
-            end = self.start_pos + self.dir*self.divisions_length*(i+1)+ vec2(self.displacements[i+1] if i < len(self.displacements)-1 else 0, 0)
-            pygame.draw.line(window, gray(220), start, end, self.width)
+            start = self.start_pos + self.dir*self.divisions_length*i + self.displacements[i]*self.dir.rotate(90)
+            end = self.start_pos + self.dir*self.divisions_length*(i+1)+ (self.displacements[i+1]*self.dir.rotate(90) if i < len(self.displacements)-1 else vec2(0,0))
+            pygame.draw.line(window, self.color, start, end, self.width)
 
-        pygame.draw.circle(window, gray(220), self.end_pos, 50)
+        if self.draw_boom: pygame.draw.circle(window, self.color, self.end_pos, 50)
 
 class Scene:
     def __init__(self, sm):
@@ -1024,7 +1048,7 @@ class Scene:
                     if e.can_stun: self.player.stunme()
                     e.stun_cooldown.start()
                     e.can_stun = False
-                    print("player is stunned!")
+                    # print("player is stunned!")
 
             e.update(dt, self.fire.pos)
 
@@ -1128,7 +1152,7 @@ def main():
     window = pygame.display.set_mode(RES)
     pygame.display.set_caption("Keep it Burning")
 
-    s = Scene()
+    s = Scene(None)
     s.load()
 
     running = True
