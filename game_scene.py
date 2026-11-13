@@ -715,6 +715,10 @@ class Vampire:
 
         self.load()
 
+        self.teleport_cooldown = Timer(5)
+        self.teleport_cooldown.start()
+        self.can_teleport = False
+
     def load(self):
         self.images = [load_image(f"assets/images/enemies/vampire/Vampire{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
         self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/vampire/Vampire{i}.png", 2, solid_overlay=(140,0,0)), gray(200), outline_thick=4, precision=8) for i in range(1,5)]
@@ -738,10 +742,24 @@ class Vampire:
 
         self.hbr = pygame.Rect(0,0, 100, 10)
         self.hr = pygame.Rect(0,0, self.hbr.width, self.hbr.height)
+        self.dist_teleport = 160
 
-    def laserme(self):
-        self.lasered = True
-        self.laser_pause.reset()
+        
+
+    def laserme(self, laser_dir=vec2(1,0)):
+        if not self.can_teleport:
+            self.lasered = True
+            self.laser_pause.reset()
+        elif self.health > 0:
+            self.can_teleport = False
+            p1 = self.pos.copy()
+            p2 = self.pos + laser_dir.rotate(90)*self.dist_teleport + genRandomVec(self.dist_teleport/10) 
+
+            self.pos = p2
+
+            return Thunderbolt(vec2(p1.x, 0), p1), Thunderbolt(vec2(p2.x, 0), p2)
+
+            #code for teleportation logic
         
 
     def delaserme(self):
@@ -759,6 +777,14 @@ class Vampire:
             self.vel = (target_pos-self.pos).normalize()*self.max_speed
         else:
             self.vel = (target_pos-self.pos).normalize()*self.hurt_speed
+
+        if not self.can_teleport:
+            self.teleport_cooldown.update(dt)
+
+            if self.teleport_cooldown.is_over():
+                self.teleport_cooldown.reset()
+                self.teleport_cooldown.start()
+                self.can_teleport = True
 
         if self.laser_pause.started:
             # self.vel *= 0
@@ -1314,6 +1340,13 @@ class Scene:
         self.pause_surf = pygame.Surface(RES)
         self.pause_surf.fill((30,30,30))
 
+        self.stun_surf = pygame.Surface(RES)
+        self.stun_surf.fill((180,20,20))
+
+        self.stun_font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 200)
+        self.stun_text = self.stun_font.render("STUNNED", True, PALLETE["hurt"], None)
+        self.stun_rect = self.stun_text.get_rect(center=RES/2)
+
         self.pause_font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 200)
         self.pause_text = self.pause_font.render("PAUSED", True, PALLETE["fg1"], None)
         self.pause_rect = self.pause_text.get_rect(center=RES/2)
@@ -1365,6 +1398,9 @@ class Scene:
         del self
 
     def update(self, dt):
+        if self.player.stunned:
+            self.stun_rect.center = RES/2  + genRandomVec(10)
+
         if self.paused:
             return
 
@@ -1447,7 +1483,7 @@ class Scene:
                     if e.can_stun: self.player.stunme()
                     e.stun_cooldown.start()
                     e.can_stun = False
-                    # print("player is stunned!")
+
 
             if e.id == 5:
                 if e.should_spawn:
@@ -1491,6 +1527,10 @@ class Scene:
                             e.should_spawn = True
 
                         e.laserme()
+                    elif e.id == 4:
+                        bolts = e.laserme()
+                        if bolts:
+                            self.bolts.extend(bolts)
                     else:
                         e.laserme()
                     if e.id == 1:
@@ -1502,6 +1542,8 @@ class Scene:
                         e.health -= 40*dt
                     if e.id == 4:
                         e.health -= 40*dt
+
+
                     if e.id == 5:
                         e.health -= 40*dt
                 else:
@@ -1547,6 +1589,11 @@ class Scene:
 
         if self.show_fire_text:
             window.blit(self.fire_text, self.fire_rect)
+
+        if self.player.stunned:
+            window.blit(self.stun_surf, (0,0), special_flags=pygame.BLEND_RGB_MULT)
+            window.blit(self.stun_text, self.stun_rect)
+
 
         if self.paused:
             window.blit(self.pause_surf, (0,0), special_flags=pygame.BLEND_RGB_MULT)
