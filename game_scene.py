@@ -1072,20 +1072,125 @@ class Thunderbolt:
 
 class AdvancementManager:
     def __init__(self):
-        ## ui rect
-        self.ui_padding = 30
-        self.ui_rect = pygame.Rect(0,0,int(self.pgb_ends[1][0]-self.pgb_ends[0][0] + 2*self.ui_padding), int(self.pgb_ends[0][1]+2*self.ui_padding))
-        self.ui_border_width = 5
-        self.ui_border_rounding = 10
-        self.ui_bg = gray(30,30,30)
-
         self.queue = []
 
+        self.f1 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 50)
+        self.f2 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 30)
+        self.f3 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 40)
+
+        self.mt = self.f3.render("ACHIEVEMENT UNLOCKED", True, PALLETE["fg1"], None)
+        self.mr = self.mt.get_rect(topleft=(50,0))
+
+        self.trans_in_timer = Timer(0.1)
+        self.trans_in_timer.start()
+
+        self.trans_out_timer = Timer(0.2)
+        self.trans_out_timer.start()
+
+        self.stay_timer = Timer(2.3)
+        self.stay_timer.start()
+
+
+        self.state = "none"
+
+        self.card_dimensions = vec2(350,100)
+        self.card_rect = pygame.Rect(0,0,int(self.card_dimensions.x), int(self.card_dimensions.y))
+
+        self.card_pos_start = vec2(200, -200)
+        self.card_pos_end = vec2(200, 100)
+        self.tier_colors = {
+            1:"#A5A7AA",
+            2:"#36C879",
+            3:"#38A9FF",
+            4:"#B46AFF",
+            5:"#FFB52E",
+            6:"#E04444"
+
+        }
+        self.card_outline_thick = 3
+        self.card_radius = 5
+
+
+
+    def add(self, title, body, tier=1):
+        ## create a card for the advancement
+        surf = pygame.Surface(self.card_dimensions)
+        surf.fill((0,0,0))
+        surf.set_colorkey((0,0,0))
+
+
+        pygame.draw.rect(surf, PALLETE["bg2"], (0,0,self.card_dimensions.x, self.card_dimensions.y), border_radius=self.card_radius)
+        pygame.draw.rect(surf, self.tier_colors[tier], (0,0,self.card_dimensions.x, self.card_dimensions.y), width=self.card_outline_thick ,border_radius=self.card_radius)
+
+        t1 = self.f1.render(str(title), True, PALLETE["fg1"], None, int(self.card_dimensions.x-40))
+        r1 = t1.get_rect()
+        r1.centerx = self.card_dimensions.x/2
+        r1.top = 10
+
+
+        t2 = self.f2.render(str(body), True, PALLETE["fg1"], None, int(self.card_dimensions.x-40))
+        r2 = t2.get_rect()
+
+        r2.centerx = self.card_dimensions.x/2
+        r2.top = r1.bottom + 10
+
+        surf.blit(t1,r1)
+        surf.blit(t2, r2)
+
+        self.ease_function = linear
+
+
+
+        self.queue.append(surf)
+        if self.state == "none":
+            self.state = "trans-in" 
+
     def update(self, dt):
-        pass
+        if self.state == "trans-in":
+            self.trans_in_timer.update(dt)
+            self.card_rect.centerx = self.card_pos_start.x + (self.card_pos_end.x - self.card_pos_start.x)*self.ease_function(self.trans_in_timer.factor)
+            self.card_rect.centery = self.card_pos_start.y + (self.card_pos_end.y - self.card_pos_start.y)*self.ease_function(self.trans_in_timer.factor)
+
+            if self.trans_in_timer.is_over():
+                self.trans_in_timer.reset()
+                self.trans_in_timer.start()
+                self.state = "stay"
+
+        elif self.state == "stay":
+            self.stay_timer.update(dt)
+            self.card_rect.centerx = self.card_pos_end.x
+            self.card_rect.centery = self.card_pos_end.y
+
+            if self.stay_timer.is_over():
+                self.stay_timer.reset()
+                self.stay_timer.start()
+                self.state = "trans-out"
+
+        elif self.state == "trans-out":
+            self.trans_out_timer.update(dt)
+            self.card_rect.centerx = self.card_pos_end.x + (self.card_pos_start.x - self.card_pos_end.x)*self.ease_function(self.trans_out_timer.factor)
+            self.card_rect.centery = self.card_pos_end.y + (self.card_pos_start.y - self.card_pos_end.y)*self.ease_function(self.trans_out_timer.factor)
+
+            if self.trans_out_timer.is_over():
+                self.trans_out_timer.reset()
+                self.trans_out_timer.start()
+                self.queue.pop(0)
+
+                if len(self.queue):
+                    self.state = "trans-in"
+                    self.card_rect.centerx = self.card_pos_start.x
+                    self.card_rect.centery = self.card_pos_start.y
+
+                else:
+                    self.state = "none"
+
 
     def draw(self, window):
-        pass
+        if self.state != "none":
+            window.blit(self.queue[0], self.card_rect)
+
+        if len(self.queue):
+            window.blit(self.mt, self.mr)
 
 class Scene:
     def __init__(self, sm):
@@ -1100,6 +1205,7 @@ class Scene:
         self.mana_particle_delay.start()
 
         self.wave_mgr = WaveManager()
+        self.adv_mgr = AdvancementManager()
 
     def load(self):
         self.player.load()
@@ -1109,6 +1215,7 @@ class Scene:
 
     def update(self, dt):
         e = self.wave_mgr.update(dt)
+        self.adv_mgr.update(dt)
         if e:
             self.enemies.extend(e)
         self.fire.update(dt)
@@ -1240,6 +1347,7 @@ class Scene:
             bolt.draw(window)
 
         self.wave_mgr.draw(window)
+        self.adv_mgr.draw(window)
 
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
@@ -1258,6 +1366,9 @@ class Scene:
             if event.key == pygame.K_5:
                 self.enemies.append(Witch(getMousePos()))
                 self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
+
+            if event.key == pygame.K_q:
+                self.adv_mgr.add(*random.choice(ADVANCEMENTS), random.randint(1,6))
 
 
 
