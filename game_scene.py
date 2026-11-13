@@ -946,6 +946,74 @@ class Witch:
         if self.lasered:
             pygame.draw.rect(window, gray(180), self.hbr, 3)
 
+class WaveManager:
+    def __init__(self):
+        self.waveid = 1
+
+        self.wave_progress = 10
+        self.pgb_gap = 10
+        self.pgb_extend = 50
+        self.pgb_height = 15
+        
+        self.fg = gray(220)
+
+        self.font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 150)
+
+        self.t = self.font.render(f"WAVE {int(self.waveid)}", True, self.fg, None)
+        self.r = self.t.get_rect()
+        self.r.centerx = RES.x/2
+        self.r.centery = 80
+
+        self.pgb_ends = ((self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap), (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap))
+
+        self.pgb_head = pygame.Rect(0,0,int(self.pgb_height/2),self.pgb_height)
+        self.pgb_head.centery = self.pgb_ends[0][1]
+
+        ## wave properites
+        self.spawn_cooldown = Timer(5)
+        self.spawn_cooldown.start()
+        self.monsters = 0
+        self.total_monsters = 0
+
+    def killed(self):
+        self.monsters -= 1
+
+    def update(self, dt):
+        enemies = []
+
+        if self.monsters > 0 and self.total_monsters > 0:
+            self.wave_progress = (self.total_monsters-self.monsters)*100/self.total_monsters
+
+        # self.wave_progress += 10*dt
+        self.pgb_head.centerx = clamp(self.pgb_ends[0][0] + (self.pgb_ends[1][0]-self.pgb_ends[0][0])*self.wave_progress/100, self.pgb_ends[0][0], self.pgb_ends[1][0])
+
+
+        if self.waveid == 1 :
+            self.spawn_cooldown.update(dt)
+            if self.spawn_cooldown.is_over():
+                self.spawn_cooldown.reset()
+                self.spawn_cooldown.start()
+
+                ## spawn
+                for _ in range(random.randint(1,3)): 
+                    enemies.append(random.choice([Bat, Jacko])(RES/2 + genRandomVec(RES.x*0.7)))
+                    self.monsters += 1
+                    self.total_monsters += 1
+
+        return enemies
+
+    def draw(self, window):
+        window.blit(self.t, self.r)
+
+        ## drawing progress bar
+        pygame.draw.rect(window, self.fg, self.pgb_head)
+        pygame.draw.line(window, self.fg, (self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap), (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap), 2)
+        pygame.draw.line(window, self.fg, (self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap - self.pgb_height/2), (self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap+self.pgb_height/2), 2)
+        pygame.draw.line(window, self.fg, (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap - self.pgb_height/2), (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap+self.pgb_height/2), 2)
+
+
+        
+
 class Thunderbolt:
     def __init__(self, start, end, precision=4, lifetime=0.2, width=7, color=(200,200,200), draw_boom=True):
         self.start_pos = start
@@ -1002,6 +1070,8 @@ class Scene:
         self.mana_particle_delay = Timer(0.07)
         self.mana_particle_delay.start()
 
+        self.wave_mgr = WaveManager()
+
     def load(self):
         self.player.load()
 
@@ -1009,6 +1079,9 @@ class Scene:
         del self
 
     def update(self, dt):
+        e = self.wave_mgr.update(dt)
+        if e:
+            self.enemies.extend(e)
         self.fire.update(dt)
 
         for bolt in self.bolts:
@@ -1116,6 +1189,7 @@ class Scene:
 
 
     def draw(self, window):
+        
         self.mana_particles.draw(window)
         self.fire.draw(window)
         self.player.draw(window)
@@ -1125,6 +1199,8 @@ class Scene:
 
         for bolt in self.bolts:
             bolt.draw(window)
+
+        self.wave_mgr.draw(window)
 
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
