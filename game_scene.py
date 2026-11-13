@@ -956,7 +956,14 @@ class Witch:
             if self.health>0:pygame.draw.rect(window, gray(180), self.hbr, 3)
 
 class WaveManager:
-    def __init__(self):
+    def __init__(self, func):
+        self.waveid = 0
+        self.wave_progress = 0
+        self.target_wave_progress = 0
+        self.wave_p_speed = 70
+        self.wave_over_func = func
+
+
         ## UI PROPS
         self.pgb_gap = 10
         self.pgb_extend = 50
@@ -970,59 +977,151 @@ class WaveManager:
         self.r.centerx = RES.x/2
         self.r.centery = 80
 
-        self.pgb_ends = ((self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap), (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap))
+        self.pgb_ends = ((self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap),(self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap))
 
         self.pgb_head = pygame.Rect(0,0,int(self.pgb_height/2),self.pgb_height)
         self.pgb_head.centery = self.pgb_ends[0][1]
-
-
-        ## wave properites
-
-        self.waveid = 1
-        self.wave_progress = 0
-
-        self.total_monsters = 0
-        self.monsters_killed = 0
-
-        self.spawn_cooldown = Timer(5)
-        self.spawn_cooldown.start()
-        
-
-        self.started = False
-        self.state = "none"
-
-
-
         self.ui_border_color = PALLETE["fg1"]
 
-    def killed(self):
+        ## wave properites
+        self.wave_started = False
+
+
+        # for standard wave
+        self.total_monsters = 0
+
+        self.monsters_killed = 0
+        self.monsters = 0
+        self.monsters_spawned = 0
+        self.monster_types = [Bat, Jacko]
+
+        self.spawn_cooldown = Timer(3)
+        self.spawn_limit = 1
+        self.spawn_cooldown.start()
+
+        
+        self.state = "none"
+
+    def genSpawnPosition(self):
+        side = random.randint(1,4)
+        rx = random.randint(0, int(RES.x))
+        ry = random.randint(0, int(RES.y))
+
+        if side == 1:
+            return vec2(rx, 10)
+        if side == 2:
+            return vec2(RES.x-10, ry)
+        if side == 3:
+            return vec2(rx, RES.y-10)
+        if side == 4:
+            return vec2(10, ry)
+
+    def startWave(self):
+        self.waveid += 1
+
+        self.t = self.font.render(f"WAVE {int(self.waveid)}", True, self.fg, None)
+        self.r = self.t.get_rect()
+        self.r.centerx = RES.x/2
+        self.r.centery = 80
+
+        self.target_wave_progress = 0
+        
+        self.monsters_killed = 0
+        self.total_monsters = 0
+        self.monsters_spawned = 0
+
+
+        if self.waveid == 1:
+            self.total_monsters = 1
+            self.monster_types = [Bat, ]
+            self.spawn_cooldown = Timer(2)
+            self.spawn_cooldown.start()
+            self.state = "spawn"
+            print("Now")
+
+        elif self.waveid == 2:
+            self.total_monsters = 3
+            self.monster_types = [Bat, Jacko]
+            self.spawn_cooldown = Timer(2)
+            self.spawn_cooldown.start()
+            self.state = "spawn"
+            print("Now")
+
+        elif self.waveid == 3:
+            self.total_monsters = 5
+            self.monster_types = [Bat, Jacko]
+            self.spawn_cooldown = Timer(2)
+            self.spawn_cooldown.start()
+            self.state = "spawn"
+            print("Now")
+        
+
+    def monsterKilled(self):
         self.monsters -= 1
+        self.monsters_killed += 1
 
     def update(self, dt):
         enemies = []
 
-        if self.monsters > 0 and self.total_monsters > 0:
-            self.wave_progress = (self.total_monsters-self.monsters)*100/self.total_monsters
 
-        # self.wave_progress += 10*dt
+
+        if self.state == "spawn":
+            if self.monsters_spawned < self.total_monsters:
+                self.spawn_cooldown.update(dt)
+                if self.spawn_cooldown.is_over():
+                    self.spawn_cooldown.reset()
+                    self.spawn_cooldown.start()
+                    n = random.randint(1, self.spawn_limit)
+
+                    self.monsters_spawned += n
+                    if self.monsters_spawned > self.total_monsters:
+                        k = (self.monsters_spawned-self.total_monsters)
+                        n -= k
+                        self.monsters_spawned -= k
+
+                    for i in range(n):
+                        enemies.append(random.choice(self.monster_types)(self.genSpawnPosition()))
+                        print("SPAWNEd")
+
+            else:
+                self.state = "clear"
+                print("YOUR job to kill them")
+
+        elif self.state == "clear":
+    
+            self.target_wave_progress = clamp(self.monsters_killed/self.total_monsters, 0, 1)*100
+            
+            
+            if self.monsters_killed == self.total_monsters and self.wave_progress == 100:
+                # wave finished
+                self.state = "none"
+                print("WAVE finished")
+                self.wave_over_func()
+
+
+
+        ## wave progress animation
+        self.wave_progress = clamp(self.wave_progress, 0, 100)
         self.pgb_head.centerx = clamp(self.pgb_ends[0][0] + (self.pgb_ends[1][0]-self.pgb_ends[0][0])*self.wave_progress/100, self.pgb_ends[0][0], self.pgb_ends[1][0])
+        if (abs(self.target_wave_progress-self.wave_progress)) >= 4:
+
+            if self.target_wave_progress > self.wave_progress:
+                self.wave_progress += self.wave_p_speed * dt
+
+            elif self.target_wave_progress < self.wave_progress:
+                self.wave_progress -= self.wave_p_speed * dt    
 
 
-        if self.waveid == 1 :
-            self.spawn_cooldown.update(dt)
-            if self.spawn_cooldown.is_over():
-                self.spawn_cooldown.reset()
-                self.spawn_cooldown.start()
-
-                ## spawn
-                for _ in range(random.randint(1,3)): 
-                    enemies.append(random.choice([Bat, Jacko])(RES/2 + genRandomVec(RES.x*0.7)))
-                    self.monsters += 1
-                    self.total_monsters += 1
+            self.wave_progress = clamp(self.wave_progress, 0, 100)
+        else:
+            self.wave_progress = self.target_wave_progress
+            
 
         return enemies
 
     def draw(self, window):
+
+        ## UI PART
         window.blit(self.t, self.r)
 
         ## drawing progress bar
@@ -1209,7 +1308,7 @@ class Scene:
         self.mana_particle_delay = Timer(0.07)
         self.mana_particle_delay.start()
 
-        self.wave_mgr = WaveManager()
+        self.wave_mgr = WaveManager(self.waveIsFinished)
         self.adv_mgr = AdvancementManager()
 
         self.pause_surf = pygame.Surface(RES)
@@ -1222,11 +1321,36 @@ class Scene:
         self.paused = False
 
         ## fire text
-        self.tutorial_state = 0
+        self.tutorial_state = 1
+
+        self.wave_gap = Timer(5)
+        self.wave_gap.start()
+        self.wave_ongoing = False
+        
         self.fire_font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 40)
         self.setFireText("Use WASD to move")
         self.show_fire_text = True
 
+    def waveIsFinished(self):
+        self.wave_ongoing = False
+        if self.tutorial_state == 4:
+            self.tutorial_state = 5
+            self.doTutorialState()
+
+
+    def doTutorialState(self):
+        if self.tutorial_state == 1:
+            self.setFireText("Use [WASD] to move")
+        if self.tutorial_state == 2:
+            self.setFireText("Use [SPACE] to unleash your laser")
+        elif self.tutorial_state == 3:
+            self.setFireText(f"First wave starts in {int(self.wave_gap.duration)}")
+        elif self.tutorial_state == 4:
+            self.setFireText("Finish that BAT")
+        elif self.tutorial_state == 5:
+            self.setFireText(f"Next wave starts in {int(self.wave_gap.duration)}")
+        else:
+            self.setFireText("")
 
     def setFireText(self, text):
         self.fire_text = self.fire_font.render(str(text), True, PALLETE["fg1"], None)
@@ -1243,11 +1367,48 @@ class Scene:
     def update(self, dt):
         if self.paused:
             return
+
+        if self.tutorial_state == 3:
+            self.wave_gap.update(dt)
+
+            self.setFireText(f"First wave starts in {int(self.wave_gap.duration - self.wave_gap.timer)}")
+
+            if self.wave_gap.is_over():
+                self.wave_gap.reset()
+                self.wave_gap.start()
+                if self.tutorial_state == 3: self.tutorial_state = 4
+                self.doTutorialState()
+
+                self.wave_mgr.startWave()
+                self.wave_ongoing = True
+
+        if self.tutorial_state >= 5 and not self.wave_ongoing:
+            self.wave_gap.update(dt)
+
+            self.setFireText(f"Next wave starts in {int(self.wave_gap.duration - self.wave_gap.timer)}")
+
+            if self.wave_gap.is_over():
+                self.wave_gap.reset()
+                self.wave_gap.start()
+                self.wave_ongoing = True
+
+                self.doTutorialState()
+
+                self.wave_mgr.startWave()
+        elif self.wave_ongoing:
+            if self.tutorial_state >= 5:
+                self.setFireText("KEEP IT BURNING")
+
+        
         e = self.wave_mgr.update(dt)
-        self.adv_mgr.update(dt)
         if e:
             self.enemies.extend(e)
+            for monster in e:
+                self.bolts.append(Thunderbolt(vec2(monster.pos.x, 0), monster.pos))
+
+
         self.fire.update(dt)
+        self.adv_mgr.update(dt)
 
         for bolt in self.bolts:
             bolt.update(dt)
@@ -1348,10 +1509,17 @@ class Scene:
 
             if not self.player.laser.begun :
                 e.delaserme()
+
             if e.health <= 0:
                 e.blastme()
+
             if e.dead:
                 self.enemies.remove(e)
+
+                self.wave_mgr.monsterKilled()
+
+
+
                 deleted += 1
 
             if i-deleted <= len(self.enemies)-2:
@@ -1364,8 +1532,6 @@ class Scene:
 
 
     def draw(self, window):
-        
-
         self.mana_particles.draw(window)
         self.fire.draw(window)
         self.player.draw(window)
@@ -1407,6 +1573,16 @@ class Scene:
 
             if event.key == pygame.K_q:
                 self.adv_mgr.add(*random.choice(ADVANCEMENTS), random.randint(1,6))
+
+            if event.key in (pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d): 
+                if self.tutorial_state == 1: self.tutorial_state = 2
+                self.doTutorialState()
+
+            if event.key == pygame.K_SPACE:
+                if self.tutorial_state == 2: self.tutorial_state = 3
+                self.doTutorialState()
+            
+
 
             if event.key == pygame.K_ESCAPE:
                 self.paused = not self.paused
