@@ -93,16 +93,16 @@ class DeathParticles:
     def draw(self, window):
         for p in self.particles:
             f = p[2]/p[3]
-            pygame.draw.circle(window, gray(200), p[0], int(10*(1-f)))
+            pygame.draw.circle(window, PALLETE["fg1"], p[0], int(10*(1-f)))
 
 class AmbientParticles:
     def __init__(self):
-        self.color = (0, 200, 200)
+        self.color = PALLETE["fire"]
 
         self.particles = []
 
     def add(self, pos):
-        self.particles.append([pos.copy(), 0, 2 + random.randint(-3, 6)/10, genRandomVec()*40])
+        self.particles.append([pos.copy(), 0, 2.6 + random.randint(-3, 6)/10, genRandomVec()*40])
 
     def update(self, dt):
         for p in self.particles:
@@ -121,7 +121,7 @@ class ManaParticles:
     ## go from the fire to the player, recharging the mana
     def __init__(self):
         self.dist_buffer = 10
-        self.colors =[(181, 26, 2), (240, 156, 46)]
+        self.colors =[PALLETE["laser1"], PALLETE["laser2"]]
         self.particles = []
 
     def add(self, pos):
@@ -146,7 +146,7 @@ class Dustparticles:
         self.particles = []
 
         self.max_size = 5
-        self.start_color = gray(180)
+        self.start_color = PALLETE["fg3"]
         self.final_color = gray(20)
 
 

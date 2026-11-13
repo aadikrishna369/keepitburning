@@ -29,10 +29,10 @@ class Player:
         
     def load(self):
         self.walk_anim = {
-            "down": [load_image(f"assets/images/player/tile{i:03}.png", 3, solid_overlay=gray(100)) for i in range(0,4)],
-            "up": [load_image(f"assets/images/player/tile{i:03}.png", 3, solid_overlay=gray(100)) for i in range(16,20)],
-            "right": [load_image(f"assets/images/player/tile{i:03}.png", 3, solid_overlay=gray(100)) for i in range(8,12)],
-            "left": [load_image(f"assets/images/player/tile{i:03}.png", 3, (1,0), solid_overlay=gray(100)) for i in range(8,12)],
+            "down": [load_image(f"assets/images/player/tile{i:03}.png", 3, solid_overlay=PALLETE["fg1"]) for i in range(0,4)],
+            "up": [load_image(f"assets/images/player/tile{i:03}.png", 3, solid_overlay=PALLETE["fg1"]) for i in range(16,20)],
+            "right": [load_image(f"assets/images/player/tile{i:03}.png", 3, solid_overlay=PALLETE["fg1"]) for i in range(8,12)],
+            "left": [load_image(f"assets/images/player/tile{i:03}.png", 3, (1,0), solid_overlay=PALLETE["fg1"]) for i in range(8,12)],
         }
 
         self.image = self.walk_anim["up"][0]
@@ -340,8 +340,8 @@ class Bat:
         self.load()
 
     def load(self):
-        self.images = [load_image(f"assets/images/enemies/bat/Bat{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
-        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/bat/Bat{i}.png", 2, solid_overlay=(140,0,0)), gray(200), outline_thick=4, precision=8) for i in range(1,5)]
+        self.images = [load_image(f"assets/images/enemies/bat/Bat{i}.png", 2, solid_overlay=PALLETE["fg1"]) for i in range(1,5)]
+        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/bat/Bat{i}.png", 2, solid_overlay=(140,0,0)), PALLETE["fg1"], outline_thick=4, precision=8) for i in range(1,5)]
 
         self.index = 0
         self.anim_speed = 8
@@ -431,16 +431,17 @@ class Bat:
         if DRAW_COLLIDERS: pygame.draw.circle(window, gray(50), self.pos, self.collider_radius)
 
         self.flap_particles.draw(window)
-        if self.health > 0: window.blit(self.image, self.rect)
+        if self.health > 0: 
+            window.blit(self.image, self.rect)
         self.death_particles.draw(window)
 
         ## drawing the health bar
-        if not len(self.death_particles.particles):
+        if (not len(self.death_particles.particles)) and self.health > 0:
             pygame.draw.rect(window, gray(30), self.hbr)
-            pygame.draw.rect(window, (180,20,20), self.hr)
+            pygame.draw.rect(window, PALLETE["hurt"], self.hr)
 
         if self.lasered:
-            pygame.draw.rect(window, gray(180), self.hbr, 3)
+            if self.health > 0: pygame.draw.rect(window, gray(180), self.hbr, 3)
 
 class Ghost:
     def __init__(self, pos):
@@ -601,8 +602,8 @@ class Jacko:
         self.load()
 
     def load(self):
-        self.images = [load_image(f"assets/images/enemies/jacko/Jacko{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
-        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/jacko/Jacko{i}.png", 2, solid_overlay=(140,0,0)), gray(200), outline_thick=4, precision=8) for i in range(1,5)]
+        self.images = [load_image(f"assets/images/enemies/jacko/Jacko{i}.png", 2, solid_overlay=PALLETE["fg1"]) for i in range(1,5)]
+        self.hurt_images = [outlineImage(load_image(f"assets/images/enemies/jacko/Jacko{i}.png", 2, solid_overlay=(140,0,0)), PALLETE["fg1"], outline_thick=4, precision=8) for i in range(1,5)]
 
         self.index = 0
         self.anim_speed = 8
@@ -701,7 +702,7 @@ class Jacko:
             pygame.draw.rect(window, (180,20,20), self.hr)
 
         if self.lasered:
-            pygame.draw.rect(window, gray(180), self.hbr, 3)
+            if self.health > 0: pygame.draw.rect(window, gray(180), self.hbr, 3)
 
 class Vampire:
     def __init__(self, pos):
@@ -760,7 +761,7 @@ class Vampire:
             self.vel = (target_pos-self.pos).normalize()*self.hurt_speed
 
         if self.laser_pause.started:
-            self.vel *= 0
+            # self.vel *= 0
             self.laser_pause.update(dt)
 
         if not self.can_stun:
@@ -826,7 +827,7 @@ class Vampire:
             pygame.draw.rect(window, (180,20,20), self.hr)
 
         if self.lasered:
-            pygame.draw.rect(window, gray(180), self.hbr, 3)
+            if self.health > 0: pygame.draw.rect(window, gray(180), self.hbr, 3)
 
 class Witch:
     def __init__(self, pos):
@@ -836,6 +837,7 @@ class Witch:
         self.death_particles = DeathParticles()
 
         self.dead = False
+        
 
         self.load()
 
@@ -860,16 +862,23 @@ class Witch:
 
         self.spawn_cooldown = Timer(10)
         self.spawn_cooldown.start()
+
+        self.spawn_delay = Timer(0.5)
+        self.spawn_delay.start()
+        self.should_spawn = False
+
+        
         self.can_spawn = True
 
     def laserme(self, laser_dir=vec2(0,1)):
         self.lasered = True
         self.laser_pause.reset()
+        self.laser_pause.start()
         
 
     def delaserme(self):
         if self.lasered:
-            self.laser_pause.start()
+            self.laser_pause.reset()
             self.lasered = False
         
     def blastme(self):
@@ -884,7 +893,7 @@ class Witch:
             self.vel = (target_pos-self.pos).normalize()*self.hurt_speed
 
         if self.laser_pause.started:
-            self.vel *= 0
+            # self.vel *= 0
             self.laser_pause.update(dt)
 
 
@@ -944,7 +953,7 @@ class Witch:
             pygame.draw.rect(window, (180,20,20), self.hr)
 
         if self.lasered:
-            pygame.draw.rect(window, gray(180), self.hbr, 3)
+            if self.health>0:pygame.draw.rect(window, gray(180), self.hbr, 3)
 
 class WaveManager:
     def __init__(self):
@@ -956,6 +965,8 @@ class WaveManager:
         self.pgb_height = 15
         
         self.fg = gray(220)
+
+        
 
         self.font = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 150)
 
@@ -974,6 +985,10 @@ class WaveManager:
         self.spawn_cooldown.start()
         self.monsters = 0
         self.total_monsters = 0
+
+
+
+        self.ui_border_color = PALLETE["fg1"]
 
     def killed(self):
         self.monsters -= 1
@@ -1010,9 +1025,6 @@ class WaveManager:
         pygame.draw.line(window, self.fg, (self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap), (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap), 2)
         pygame.draw.line(window, self.fg, (self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap - self.pgb_height/2), (self.r.left-self.pgb_extend/2, self.r.bottom + self.pgb_gap+self.pgb_height/2), 2)
         pygame.draw.line(window, self.fg, (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap - self.pgb_height/2), (self.r.right+self.pgb_extend/2, self.r.bottom + self.pgb_gap+self.pgb_height/2), 2)
-
-
-        
 
 class Thunderbolt:
     def __init__(self, start, end, precision=4, lifetime=0.2, width=7, color=(200,200,200), draw_boom=True):
@@ -1057,6 +1069,23 @@ class Thunderbolt:
             pygame.draw.line(window, self.color, start, end, self.width)
 
         if self.draw_boom: pygame.draw.circle(window, self.color, self.end_pos, 50)
+
+class AdvancementManager:
+    def __init__(self):
+        ## ui rect
+        self.ui_padding = 30
+        self.ui_rect = pygame.Rect(0,0,int(self.pgb_ends[1][0]-self.pgb_ends[0][0] + 2*self.ui_padding), int(self.pgb_ends[0][1]+2*self.ui_padding))
+        self.ui_border_width = 5
+        self.ui_border_rounding = 10
+        self.ui_bg = gray(30,30,30)
+
+        self.queue = []
+
+    def update(self, dt):
+        pass
+
+    def draw(self, window):
+        pass
 
 class Scene:
     def __init__(self, sm):
@@ -1123,6 +1152,26 @@ class Scene:
                     e.can_stun = False
                     # print("player is stunned!")
 
+            if e.id == 5:
+                if e.should_spawn:
+                    e.spawn_delay.update(dt)
+
+                    if e.spawn_delay.is_over():
+                        e.spawn_delay.reset()
+                        e.spawn_delay.start()
+                        e.should_spawn = False
+                        poss = [Bat, Jacko, Vampire, Ghost]
+                        p1 = e.pos.copy() + self.player.laser.dir.rotate(90)*50
+                        p2 = e.pos.copy() - self.player.laser.dir.rotate(90)*50
+
+                        self.enemies.append(random.choice(poss)(p1))
+                        self.enemies[-1].update(dt, self.fire.pos)
+                        self.bolts.append(Thunderbolt(vec2(p1.x, 0), p1))
+
+                        self.enemies.append(random.choice(poss)(p2))
+                        self.enemies[-1].update(dt, self.fire.pos)
+                        self.bolts.append(Thunderbolt(vec2(p2.x, 0), p2))
+
             e.update(dt, self.fire.pos)
 
             if (e.pos - self.fire.pos).length_squared() <= (e.collider_radius + self.fire.collider_radius)**2:
@@ -1142,19 +1191,9 @@ class Scene:
                         # self.enemies.extend(e.laserme())
                         if e.can_spawn:
                             e.can_spawn = False
-                            poss = [Bat, Jacko, Vampire, Ghost]
-                            p1 = e.pos.copy() + self.player.laser.dir.rotate(90)*50
-                            p2 = e.pos.copy() - self.player.laser.dir.rotate(90)*50
+                            e.should_spawn = True
 
-                            self.enemies.append(random.choice(poss)(p1))
-                            self.enemies[-1].update(dt, self.fire.pos)
-                            self.bolts.append(Thunderbolt(vec2(p1.x, 0), p1))
-
-                            self.enemies.append(random.choice(poss)(p2))
-                            self.enemies[-1].update(dt, self.fire.pos)
-                            self.bolts.append(Thunderbolt(vec2(p2.x, 0), p2))
-
-                            e.laserme()
+                        e.laserme()
                     else:
                         e.laserme()
                     if e.id == 1:

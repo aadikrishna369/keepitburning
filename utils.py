@@ -5,6 +5,23 @@ pygame.init()
 vec2 = pygame.math.Vector2
 resolution = vec2(1280, 720)
 
+def hex_to_rgb(hex):
+    return tuple(pygame.Color.from_hex(hex))[:3]
+
+PALLETE = {
+    "bg1": hex_to_rgb("#111214"),
+    "bg2":hex_to_rgb("#202226"),
+    "fg1":hex_to_rgb("#E8E8E5"),
+    "fg2":hex_to_rgb("#A5A7AA"),
+    "fg3":hex_to_rgb("#666A70"),
+    "fire":hex_to_rgb("#00D0D0"),
+    "laser1":hex_to_rgb("#E04418"),
+    "laser2":hex_to_rgb("#FFB52E"),
+    "hurt":(180,20,20),
+    "hurt_border": (180, 180, 180),
+
+}
+
 class Timer:
     def __init__(self, duration):
         self.timer = 0
