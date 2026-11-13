@@ -63,7 +63,7 @@ def main():
     window = pygame.display.set_mode(RES)
     pygame.display.set_caption("Keep it Burning")
 
-    s = Scene()
+    s = Scene(None)
     s.load()
 
     running = True

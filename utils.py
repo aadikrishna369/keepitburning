@@ -23,68 +23,6 @@ PALLETE = {
 }
 
 
-ADVANCEMENTS = [
-    # Combat
-    ("First Blood", "Eliminate your very first enemy"),
-    ("Pest Control", "Eliminate a hundred enemies"),
-    ("Exterminator", "Eliminate five hundred enemies"),
-    ("Genocide", "Eliminate a thousand enemies"),
-    ("Bloodbath", "Kill a hundred enemies in one run"),
-    ("Overkill", "Eliminate five enemies within seconds"),
-    ("Population Control", "Kill twenty enemies in ten seconds"),
-    ("No Survivors", "Eliminate every enemy in one wave"),
-    ("Certified Menace", "Accumulate two hundred kills"),
-    ("Mass Destruction", "Kill fifty enemies in one wave"),
-
-    # Survival
-    ("Still Breathing", "Survive your first five waves"),
-    ("Built Different", "Survive ten consecutive waves"),
-    ("Unkillable", "Survive twenty consecutive waves"),
-    ("Against All Odds", "Survive a wave at critical health"),
-    ("One More Wave", "Start another wave after ten"),
-    ("The Last Stand", "Survive a swarm of fifty enemies"),
-    ("Sleep Is Overrated", "Survive thirty consecutive waves"),
-    ("Touch Grass", "Survive for thirty whole minutes"),
-    ("Against The World", "Survive with thirty enemies alive"),
-    ("The Beginning", "Reach your first ten waves"),
-
-    # Skill
-    ("Untouchable", "Complete a wave without taking damage"),
-    ("Close Call", "Survive an attack at one health"),
-    ("Speed Demon", "Clear a wave in under twenty seconds"),
-    ("Bullet Ballet", "Eliminate ten enemies without damage"),
-    ("Clean Sweep", "Clear a wave without missing"),
-    ("Frame Perfect", "Eliminate an enemy before getting hit"),
-    ("Untamed", "Survive five consecutive swarm waves"),
-    ("Efficiency Expert", "Kill fifteen enemies within five seconds"),
-    ("Dancing With Death", "Dodge twenty consecutive attacks"),
-    ("Flawless", "Complete five waves without taking damage"),
-
-    # Funny
-    ("Professional Victim", "Experience your first unfortunate death"),
-    ("Skill Issue", "Die within thirty seconds of starting"),
-    ("Speedrun Any%", "Die within ten seconds of starting"),
-    ("Just One More", "Restart your run five times"),
-    ("Refund Requested", "Die immediately after starting a wave"),
-    ("Bro Thinks He's Him", "Reach wave fifteen somehow"),
-    ("Personal Space!", "Get surrounded by thirty enemies"),
-    ("Emotional Damage", "Die ten times in total"),
-    ("Unemployed Behaviour", "Play for two hours straight"),
-    ("Therapy Needed", "Experience fifty unfortunate deaths"),
-
-    # Special / Secret
-    ("The Observer", "Watch a hundred enemies spawn"),
-    ("Curious Creature", "Stand completely still for sixty seconds"),
-    ("Pacifist", "Survive two minutes without attacking"),
-    ("Against The Clock", "Kill an enemy before time expires"),
-    ("The Chosen One", "Survive an exceptionally difficult wave"),
-    ("Touch Of Death", "Get eliminated by the weakest enemy"),
-    ("Unfinished Business", "Restart immediately after dying"),
-    ("The End?", "Reach the legendary fiftieth wave"),
-    ("Why Though?", "Kill a thousand enemies in total"),
-    ("You Have No Life", "Unlock every other advancement"),
-]
-
 
 ## ease functions
 

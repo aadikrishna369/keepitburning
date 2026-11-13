@@ -717,7 +717,7 @@ class Vampire:
 
         self.teleport_cooldown = Timer(5)
         self.teleport_cooldown.start()
-        self.can_teleport = False
+        self.can_teleport = True
 
     def load(self):
         self.images = [load_image(f"assets/images/enemies/vampire/Vampire{i}.png", 2, solid_overlay=gray(200)) for i in range(1,5)]
@@ -1024,6 +1024,7 @@ class WaveManager:
         self.spawn_cooldown = Timer(3)
         self.spawn_limit = 1
         self.spawn_cooldown.start()
+        self.can_spawn = True
 
         
         self.state = "none"
@@ -1055,32 +1056,85 @@ class WaveManager:
         self.monsters_killed = 0
         self.total_monsters = 0
         self.monsters_spawned = 0
+        self.spawn_limit = 1
 
 
         if self.waveid == 1:
             self.total_monsters = 1
+
             self.monster_types = [Bat, ]
             self.spawn_cooldown = Timer(2)
-            self.spawn_cooldown.start()
-            self.state = "spawn"
-            print("Now")
+            
 
         elif self.waveid == 2:
             self.total_monsters = 3
-            self.monster_types = [Bat, Jacko]
-            self.spawn_cooldown = Timer(2)
-            self.spawn_cooldown.start()
-            self.state = "spawn"
-            print("Now")
+
+            self.monster_types = [Bat, Ghost]
+            self.spawn_cooldown = Timer(3)
+
 
         elif self.waveid == 3:
-            self.total_monsters = 5
+            self.total_monsters = 4
+
             self.monster_types = [Bat, Jacko]
-            self.spawn_cooldown = Timer(2)
-            self.spawn_cooldown.start()
-            self.state = "spawn"
-            print("Now")
+            self.spawn_cooldown = Timer(3)
+
+
+        elif self.waveid == 4:
+            self.total_monsters = 2
+
+            self.monster_types = [Witch, Jacko]
+            self.spawn_cooldown = Timer(5)
+
+
+        elif self.waveid == 5:
+            self.total_monsters = 3
+
+            self.monster_types = [Witch, Jacko, Bat]
+            self.spawn_cooldown = Timer(3)
+
+
+        elif self.waveid == 6:
+            self.total_monsters = 6
+
+            self.monster_types = [Bat, ]
+            self.spawn_limit = 4
+            self.spawn_cooldown = Timer(3)
+
+
+        elif self.waveid == 7:
+            self.total_monsters = 1
+
+            self.monster_types = [Vampire, ]
+            self.spawn_cooldown = Timer(3)
+
+        ## after this in general.
+
+        elif self.waveid > 7:
+            max_monsters = self.waveid + 2
+
+            ## vampire - 3
+            ## witch - 2
+            
+            i_v = random.randint(0,1)
+            i_w = random.randint(0,1)
+
+            self.monster_types = [Bat, Jacko, Ghost]
+            if i_v:
+                self.monster_types.append(Vampire)
+                max_monsters -= 3
+            if i_w:
+                self.monster_types.append(Witch)
+                max_monsters -= 2
+
+            self.total_monsters = max_monsters
+            self.spawn_limit = random.randint(1,int(self.waveid/2))
+            self.spawn_cooldown = Timer(5*(1 + math.exp(self.waveid-7)))
+
         
+
+        self.state = "spawn"
+        self.spawn_cooldown.start()
 
     def monsterKilled(self):
         self.monsters -= 1
@@ -1089,15 +1143,24 @@ class WaveManager:
     def update(self, dt):
         enemies = []
 
+        if not self.can_spawn:
+            self.spawn_cooldown.update(dt)
 
+            if self.spawn_cooldown.is_over():
+                self.spawn_cooldown.reset()
+                self.spawn_cooldown.start()
+                self.can_spawn = True
 
         if self.state == "spawn":
             if self.monsters_spawned < self.total_monsters:
-                self.spawn_cooldown.update(dt)
-                if self.spawn_cooldown.is_over():
+                
+                if self.can_spawn:
+                    self.can_spawn = False
                     self.spawn_cooldown.reset()
                     self.spawn_cooldown.start()
-                    n = random.randint(1, self.spawn_limit)
+                    if self.spawn_limit > 1: n = random.randint(1, self.spawn_limit)
+                    else: n =1
+                    
 
                     self.monsters_spawned += n
                     if self.monsters_spawned > self.total_monsters:
@@ -1106,12 +1169,14 @@ class WaveManager:
                         self.monsters_spawned -= k
 
                     for i in range(n):
-                        enemies.append(random.choice(self.monster_types)(self.genSpawnPosition()))
-                        print("SPAWNEd")
+                        monster = random.choice(self.monster_types)
+                        enemies.append(monster(self.genSpawnPosition()))
+                        if monster.__name__ == "Witch":
+                            self.total_monsters += 2
+                            self.monsters_spawned += 2
 
             else:
                 self.state = "clear"
-                print("YOUR job to kill them")
 
         elif self.state == "clear":
     
@@ -1121,7 +1186,6 @@ class WaveManager:
             if self.monsters_killed == self.total_monsters and self.wave_progress == 100:
                 # wave finished
                 self.state = "none"
-                print("WAVE finished")
                 self.wave_over_func()
 
 
@@ -1203,6 +1267,7 @@ class Thunderbolt:
 class AdvancementManager:
     def __init__(self):
         self.queue = []
+        self.advancements = []
 
         self.f1 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 50)
         self.f2 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 30)
@@ -1240,10 +1305,51 @@ class AdvancementManager:
         self.card_outline_thick = 3
         self.card_radius = 5
 
+        self.monsters_killed = 0
+        self.killed = {
+            "bats":0,
+            "ghosts":0,
+            "jackos":0,
+            "witches":0,
+            "vampires":0
+        }
+        self.monster_names = ["bats","ghosts","jackos","witches","vampires"]
+        self.deaths = 0
+        self.playtime = 0
+        self.laserTime = 0
+        self.maxWave = 0
+        self.fireDamage = 0
+
+        
+
+
+    def logKill(self, data):
+        self.monsters_killed += 1
+        self.killed[self.monster_names[data.id-1]] += 1
+
+
+    def logWave(self, data):
+        if data > self.maxWave:
+            self.maxWave = data
+
+    def logDeath(self):
+        self.deaths += 1
+
+    def logLaserTime(self, dt):
+        self.laserTime += dt
+
+    def logPlayTime(self, dt):
+        self.playtime += dt
+
+    def logFireDamage(self, damage):
+        self.fireDamage += damage
 
 
     def add(self, title, body, tier=1):
         ## create a card for the advancement
+        if title in self.advancements:
+            return
+        self.advancements.append(title)
         surf = pygame.Surface(self.card_dimensions)
         surf.fill((0,0,0))
         surf.set_colorkey((0,0,0))
@@ -1314,6 +1420,33 @@ class AdvancementManager:
                 else:
                     self.state = "none"
 
+        ## advancements
+        if self.monsters_killed >= 100:
+            self.add("Pest Control", "Kill 100 monsters", 2)
+        
+        if self.monsters_killed >= 500:
+            self.add("Exterminator", "Kill 500 monsters", 3)
+
+        if self.monsters_killed >= 1000:
+            self.add("Genocide", "Eliminate 1000 monsters", 4)
+
+        if self.maxWave >= 5:
+            self.add("Still Breathing", "Survive first 5 waves", 2)
+
+        if self.maxWave >= 10:
+            self.add("Built Different", "Survive 10 waves", 3)
+
+        if self.maxWave == 5 and self.fireDamage == 0:
+            self.add("Flawless", "Survive 5 waves without damage", 3)
+
+        if self.deaths >= 1:
+            self.add("First Death", "Experience your first death", 3)
+
+        if self.playtime >= 5*60:
+            self.add("Just one more", "Play the game for 5 min", 4)
+        
+                
+
 
     def draw(self, window):
         if self.state != "none":
@@ -1364,8 +1497,13 @@ class Scene:
         self.setFireText("Use WASD to move")
         self.show_fire_text = True
 
+    # def reinit()
+
     def waveIsFinished(self):
         self.wave_ongoing = False
+
+        self.adv_mgr.logWave(self.wave_mgr.waveid)
+
         if self.tutorial_state == 4:
             self.tutorial_state = 5
             self.doTutorialState()
@@ -1431,6 +1569,7 @@ class Scene:
                 self.doTutorialState()
 
                 self.wave_mgr.startWave()
+
         elif self.wave_ongoing:
             if self.tutorial_state >= 5:
                 self.setFireText("KEEP IT BURNING")
@@ -1453,6 +1592,12 @@ class Scene:
                 self.bolts.remove(bolt)
 
         self.player.update(dt)
+
+        if self.player.laser.begun:
+            if self.tutorial_state == 2: 
+                self.tutorial_state = 3
+                self.doTutorialState()
+            self.adv_mgr.logLaserTime(dt)
 
         dist_p_f = (self.player.pos - self.fire.pos).length_squared()
 
@@ -1513,6 +1658,8 @@ class Scene:
                     e.blastme()
                     e.health = -10
                     self.fire.health -= 10
+                    self.adv_mgr.logFireDamage(10)
+                    self.adv_mgr.add("Help Fire?", "Fire kills any monster", 2)
 
             if self.player.laser.begun:
                 #detect if enemy is being lsered
@@ -1542,10 +1689,12 @@ class Scene:
                         e.health -= 40*dt
                     if e.id == 4:
                         e.health -= 40*dt
-
-
                     if e.id == 5:
                         e.health -= 40*dt
+
+                    if e.health <= 0:
+                        if self.wave_mgr.waveid == 1:
+                            self.adv_mgr.add("First Blood", "Kill you first monster", 2)
                 else:
                     e.delaserme()
 
@@ -1557,11 +1706,9 @@ class Scene:
 
             if e.dead:
                 self.enemies.remove(e)
-
                 self.wave_mgr.monsterKilled()
 
-
-
+                self.adv_mgr.logKill(e)
                 deleted += 1
 
             if i-deleted <= len(self.enemies)-2:
@@ -1571,7 +1718,9 @@ class Scene:
 
         if self.fire.health <= 0:
             self.scene_over = True
+            self.adv_mgr.logDeath()
 
+        self.adv_mgr.logPlayTime(dt)
 
     def draw(self, window):
         self.mana_particles.draw(window)
@@ -1618,18 +1767,12 @@ class Scene:
                 self.enemies.append(Witch(getMousePos()))
                 self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
 
-            if event.key == pygame.K_q:
-                self.adv_mgr.add(*random.choice(ADVANCEMENTS), random.randint(1,6))
 
             if event.key in (pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d): 
-                if self.tutorial_state == 1: self.tutorial_state = 2
-                self.doTutorialState()
-
-            if event.key == pygame.K_SPACE:
-                if self.tutorial_state == 2: self.tutorial_state = 3
-                self.doTutorialState()
-            
-
+                if self.tutorial_state == 1:
+                    self.tutorial_state = 2
+                    self.doTutorialState()
+                    self.adv_mgr.add("Bad Decision", "Start to play the game", 1)
 
             if event.key == pygame.K_ESCAPE:
                 self.paused = not self.paused
