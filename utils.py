@@ -1,9 +1,5 @@
 import pygame, time, math, random
 
-pygame.mixer.pre_init(
-    channels=3,
-    buffer=256
-)
 pygame.init()
 
 
