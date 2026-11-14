@@ -8,7 +8,7 @@ from game_over_scene import Scene as Scene3
 
 RES = resolution
 
-window = pygame.display.set_mode(RES)
+window = pygame.display.set_mode(RES, pygame.SCALED|pygame.FULLSCREEN|pygame.HWACCEL)
 pygame.display.set_caption("Keep it Burning")
 
 def ease_in_out_cubic(t):
@@ -403,7 +403,7 @@ class Application:
         self.advancement_manager = AdvancementManager(self.sound_manager)
         self.initialize()
 
-        self.icon = load_image("assets/images/icon.png", 2)
+        self.icon = load_image("assets/images/icon.png", 1)
         self.icon.set_colorkey((255,255,255))
         pygame.display.set_icon(self.icon)
 

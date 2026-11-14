@@ -991,7 +991,7 @@ class Witch:
 
 class WaveManager:
     def __init__(self, func):
-        self.waveid = 8
+        self.waveid = 0
         self.wave_progress = 0
         self.target_wave_progress = 0
         self.wave_p_speed = 70
@@ -1148,6 +1148,10 @@ class WaveManager:
         self.monsters -= 1
         self.monsters_killed += 1
 
+    def logWitchSpawn(self):
+        self.total_monsters += 2
+        self.monsters_spawned += 2
+
     def update(self, dt):
         enemies = []
 
@@ -1179,9 +1183,9 @@ class WaveManager:
                     for i in range(n):
                         monster = random.choice(self.monster_types)
                         enemies.append(monster(self.genSpawnPosition()))
-                        if monster.__name__ == "Witch":
-                            self.total_monsters += 2
-                            self.monsters_spawned += 2
+                        # if monster.__name__ == "Witch":
+                        #     self.total_monsters += 2
+                        #     self.monsters_spawned += 2
 
             else:
                 self.state = "clear"
@@ -1495,6 +1499,7 @@ class Scene:
                         self.enemies.append(random.choice(poss)(p2))
                         self.enemies[-1].update(dt, self.fire.pos)
                         self.bolts.append(Thunderbolt(vec2(p2.x, 0), p2))
+                        self.wave_mgr.logWitchSpawn()
 
             e.update(dt, self.fire.pos)
 
@@ -1618,21 +1623,6 @@ class Scene:
 
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_1:
-                self.enemies.append(Bat(getMousePos()))
-                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
-            if event.key == pygame.K_2:
-                self.enemies.append(Ghost(getMousePos()))
-                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
-            if event.key == pygame.K_3:
-                self.enemies.append(Jacko(getMousePos()))
-                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
-            if event.key == pygame.K_4:
-                self.enemies.append(Vampire(getMousePos()))
-                self.bolts.append(Thunderbolt(vec2(getMousePos().x, 0), getMousePos()))
-            if event.key == pygame.K_5:
-                self.adv_mgr.add(*random.choice(advancements), 3)
-
             if event.key in (pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d): 
                 if self.tutorial_state == 1:
                     self.tutorial_state = 2
