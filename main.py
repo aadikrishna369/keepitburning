@@ -27,7 +27,7 @@ class SoundManager:
 
     def load_audio(self):
         self.audio_loaded = True
-        path = "assets/sfx/ogg/{}.ogg"
+        path = "assets/sfx/mp3/{}.mp3"
 
 
         self.splash = pygame.mixer.Sound(path.format("splash_audio"))
@@ -113,7 +113,7 @@ class AdvancementManager:
         self.f3 = pygame.font.Font("assets/fonts/KenneyPixel.ttf", 40)
 
         self.mt = self.f3.render("ACHIEVEMENT UNLOCKED", True, PALLETE["fg1"], None)
-        self.mr = self.mt.get_rect(topleft=(70,0))
+        self.mr = self.mt.get_rect(topleft=(70,10))
 
         self.trans_in_timer = Timer(0.4)
         self.trans_in_timer.start()
@@ -163,7 +163,7 @@ class AdvancementManager:
         self.icon = load_image("assets/images/icons/lock.png", scale=0.2, solid_overlay=gray(200), pixelated=3)
         self.icon_rect = self.icon.get_rect()
         self.icon_rect.right = 60
-        self.icon_rect.top = 0
+        self.icon_rect.top = 10
     
     def logKill(self, data):
         self.monsters_killed += 1
@@ -287,9 +287,18 @@ class AdvancementManager:
         if self.deaths >= 1:
             self.add("First Death", "Experience your first death", 3)
 
+        ## platime
         if self.playtime >= 2*60:
             self.add("Just one more", "Play the game for 2 min", 4)
 
+        if self.playtime >= 5*60:
+            self.add("Having fun", "Keep playing the game for 5 min", 4)
+
+        if self.playtime >= 10*60:
+            self.add("Game love", "Play the game for 2 min", 4)
+
+        if self.playtime >= 15*60:
+            self.add("Touch grass", "Play the game for 15 min", 4)
 
         ##
         if self.monsters_killed >= 1000:

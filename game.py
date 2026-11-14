@@ -399,7 +399,7 @@ class Application:
         self.can_start_count = 0
         self.can_start_timer = 0.1
 
-        # pygame.mouse.set_visible(False)
+        pygame.mouse.set_visible(False)
 
         self.RES = RES
         

@@ -556,7 +556,6 @@ class Ghost:
                 self.invi_timer.start()
                 for i in self.images: i.set_alpha(255)
                 self.can_invi = False
-                # print("waht")
 
 
         self.index %= len(self.images)
@@ -1325,6 +1324,11 @@ class Scene:
 
         self.sound_manager.loop("bgm")
 
+        
+        self.mouse_cursor = load_image("assets/images/icons/mouse.png", scale=3.4)
+        self.mouse_cursor.set_colorkey((71, 45, 60))
+        self.mouse_rect = self.mouse_cursor.get_rect()
+
     def waveIsFinished(self):
         self.wave_ongoing = False
 
@@ -1362,6 +1366,8 @@ class Scene:
         del self
 
     def update(self, dt):
+        self.mouse_rect.center = pygame.mouse.get_pos()
+
         if self.player.stunned:
             self.stun_rect.center = RES/2  + genRandomVec(10)
 
@@ -1619,6 +1625,8 @@ class Scene:
         if self.paused:
             window.blit(self.pause_surf, (0,0), special_flags=pygame.BLEND_RGB_MULT)
             window.blit(self.pause_text, self.pause_rect)
+
+        window.blit(self.mouse_cursor, self.mouse_rect)
 
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:

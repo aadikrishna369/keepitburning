@@ -33,7 +33,6 @@ class Scene:
         self.thunder_sfx_played = False
 
 
-
         self.can_proceed = False
         self.proceed_timer = Timer(4.5)
         self.proceed_timer.start()
@@ -64,7 +63,6 @@ class Scene:
                 self.thunder_sfx_played = True
 
             self.can_proceed = True
-
             
 
         self.raindrop_buffer.update(dt)
