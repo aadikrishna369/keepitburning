@@ -8,7 +8,7 @@ from game_over_scene import Scene as Scene3
 
 RES = resolution
 
-window = pygame.display.set_mode(RES)
+window = pygame.display.set_mode(RES, pygame.SCALED|pygame.FULLSCREEN)
 pygame.display.set_caption("Keep it Burning")
 
 def ease_in_out_cubic(t):
@@ -407,6 +407,7 @@ class Application:
 
 
         self.advancement_manager = AdvancementManager(self.sound_manager)
+        self.screenshots = 0
         self.initialize()
 
     def initialize(self):
@@ -508,8 +509,6 @@ class Application:
                 self.can_start = True
                 self.just_start = True
                 
-
-
     def draw(self, window):
         
         if (self.can_start) and (self.initialized):
@@ -546,6 +545,11 @@ class Application:
 
     def event_update(self, event):
         self.current_scene.event_update(event)
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LALT:
+                self.screenshots += 1
+                pygame.image.save(window, f"screenshot{self.screenshots}.png")
 
 
 if __name__ == "__main__":

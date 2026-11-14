@@ -1328,6 +1328,8 @@ class Scene:
         self.mouse_cursor.set_colorkey((71, 45, 60))
         self.mouse_rect = self.mouse_cursor.get_rect()
 
+        self.stored_images = 0
+
     def waveIsFinished(self):
         self.wave_ongoing = False
 
@@ -1627,6 +1629,11 @@ class Scene:
 
         window.blit(self.mouse_cursor, self.mouse_rect)
 
+    def saveAsset(self, img):
+        self.stored_images += 1
+        img = pygame.transform.scale_by(img, 4)
+        pygame.image.save(img, f"image{int(self.stored_images)}.png")
+
     def event_update(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_1:
@@ -1656,10 +1663,41 @@ class Scene:
             if event.key == pygame.K_SPACE:
                 self.sound_manager.play("fire1")
 
+            if event.key == pygame.K_p:
+                ## save all aassets in highquality
+                self.saveAsset(self.player.walk_anim["up"][0])
+                self.saveAsset(self.player.walk_anim["down"][0])
+                self.saveAsset(self.player.walk_anim["left"][0])
+                self.saveAsset(self.player.walk_anim["right"][0])
+
+                
+                self.enemies.append(Bat(getMousePos()))
+                self.saveAsset(self.enemies[-1].images[0])
+                self.saveAsset(self.enemies[-1].hurt_images[0])
+
+                self.enemies.append(Jacko(getMousePos()))
+                self.saveAsset(self.enemies[-1].images[0])
+                self.saveAsset(self.enemies[-1].hurt_images[0])
+
+                self.enemies.append(Ghost(getMousePos()))
+                self.saveAsset(self.enemies[-1].images[0])
+                self.saveAsset(self.enemies[-1].hurt_images[0])
+
+                self.enemies.append(Vampire(getMousePos()))
+                self.saveAsset(self.enemies[-1].images[0])
+                self.saveAsset(self.enemies[-1].hurt_images[0])
+
+                self.enemies.append(Witch(getMousePos()))
+                self.saveAsset(self.enemies[-1].images[0])
+                self.saveAsset(self.enemies[-1].hurt_images[0])
+                
+
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
                 self.sound_manager.stop("fire2")
                 self.laser_sfx_playing = False
+
+        
 
 
 
