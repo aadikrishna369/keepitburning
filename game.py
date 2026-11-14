@@ -371,12 +371,6 @@ class AdvancementManager:
         if self.deaths >= 1:
             self.add("Skill Issue", "Die for the first time")
 
-        if self.deaths >= 10:
-            self.add("Professional Victim", "Die 10 times", 2)
-
-        if self.deaths >= 50:
-            self.add("Therapy Needed", "Die 50 times", 3)
-
                         
 
 
@@ -408,6 +402,10 @@ class Application:
 
         self.advancement_manager = AdvancementManager(self.sound_manager)
         self.initialize()
+
+        self.icon = load_image("assets/images/icon.png", 2)
+        self.icon.set_colorkey((255,255,255))
+        pygame.display.set_icon(self.icon)
 
     def initialize(self):
         s = time.perf_counter()
@@ -508,8 +506,6 @@ class Application:
                 self.can_start = True
                 self.just_start = True
                 
-
-
     def draw(self, window):
         
         if (self.can_start) and (self.initialized):

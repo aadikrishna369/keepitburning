@@ -991,7 +991,7 @@ class Witch:
 
 class WaveManager:
     def __init__(self, func):
-        self.waveid = 0
+        self.waveid = 8
         self.wave_progress = 0
         self.target_wave_progress = 0
         self.wave_p_speed = 70
@@ -1137,7 +1137,7 @@ class WaveManager:
 
             self.total_monsters = max_monsters
             self.spawn_limit = random.randint(1,int(self.waveid/2))
-            self.spawn_cooldown = Timer(5*(1 + math.exp(self.waveid-7)))
+            self.spawn_cooldown = Timer(3)
 
         
 
@@ -1588,17 +1588,6 @@ class Scene:
             self.adv_mgr.logDeath()
 
         self.adv_mgr.logPlayTime(dt)
-
-
-        ## sfx - laser burning
-        # if self.play_laser_burn_sfx:
-        #     if not self.playing_laser_burn_sfx:
-        #         self.sound_manager.loop("laser_burn")
-        #         self.playing_laser_burn_sfx = True
-        # else:
-        #     if self.playing_laser_burn_sfx:
-        #         self.sound_manager.stop("laser_burn")
-        #         self.playing_laser_burn_sfx = False
 
     def draw(self, window):
         self.mana_particles.draw(window)
