@@ -1324,8 +1324,7 @@ class Scene:
 
         self.sound_manager.loop("bgm")
 
-        
-        self.mouse_cursor = load_image("assets/images/icons/mouse.png", scale=3.4)
+        self.mouse_cursor = load_image("assets/images/icons/mouse.png", scale=3)
         self.mouse_cursor.set_colorkey((71, 45, 60))
         self.mouse_rect = self.mouse_cursor.get_rect()
 

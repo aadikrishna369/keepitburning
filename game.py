@@ -388,7 +388,6 @@ class AdvancementManager:
             window.blit(self.mt, self.mr)
             window.blit(self.icon, self.icon_rect)
 
-
 class Application:
     def __init__(self):
         self.initialized = False
