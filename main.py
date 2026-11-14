@@ -410,7 +410,7 @@ class Application:
 
     def initialize(self):
         s = time.perf_counter()
-        print(time.perf_counter() - s)
+        # print(time.perf_counter() - s)
 
         self.scenes = [Scene0, Scene1, Scene2, Scene3]
 

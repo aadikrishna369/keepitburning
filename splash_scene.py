@@ -16,7 +16,7 @@ class Scene:
     def __init__(self, sm, am):
         self.scale = 0.6
         self.sound_manager = sm
-        print(self.sound_manager)
+        # print(self.sound_manager)
         self.adv_mgr = am
 
         self.screen = pygame.Surface(RES)

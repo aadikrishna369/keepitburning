@@ -1338,7 +1338,7 @@ class Scene:
         if self.tutorial_state == 1:
             self.setFireText("Use [WASD] to move")
         if self.tutorial_state == 2:
-            self.setFireText("Use [SPACE] to unleash your laser")
+            self.setFireText("Hold [SPACE] to unleash your laser")
         elif self.tutorial_state == 3:
             self.setFireText(f"First wave starts in {int(self.wave_gap.duration)}")
         elif self.tutorial_state == 4:
